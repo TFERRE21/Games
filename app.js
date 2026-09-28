@@ -337,7 +337,12 @@ function addRPGReward(id,phase,stars){
   recalcLevel(); saveRPG();
   if(apiToken)api('/api/scores',{method:'POST',body:JSON.stringify({gameId:id+'-phase-'+phase,score:stars*100+phase})}).catch(()=>{});
 }
-function loseLife(){recoverLives();if(rpg.lives<=0)return false;rpg.lives--;if(!rpg.nextLifeAt)rpg.nextLifeAt=Date.now()+60000;saveRPG();gameSound('fail');return true}
+async function loseLife(){
+ recoverLives();if(!rpg.lives)return false;
+ rpg.lives--;if(!rpg.nextLifeAt)rpg.nextLifeAt=Date.now()+60000;saveRPG();gameSound('fail');
+ if(apiToken)api('/api/rpg/life/lose',{method:'POST'}).then(d=>{if(d.player){rpg.lives=d.player.lives;rpg.coins=d.player.coins;rpg.xp=d.player.xp;rpg.level=d.player.level;rpg.nextLifeAt=d.player.next_life_at||0;saveRPG();updateRPGHud()}}).catch(()=>{});
+ return true
+}
 function restoreLife(){rpg.lives=Math.min(5,rpg.lives+1);rpg.nextLifeAt=rpg.lives<5?Date.now()+60000:0;saveRPG();gameSound('bonus')}
 function updateRPGHud(){
   const el=document.querySelector('#rpgHud');if(!el)return;
@@ -527,7 +532,7 @@ function renderProgress(){
 function claimDaily(){
  const today=new Date().toISOString().slice(0,10);
  if(portal.daily.date===today){document.querySelector('#dailyBonus').innerHTML='<div class="bonus-box">🎁 Bônus de hoje já coletado. Volte amanhã!</div>';return}
- portal.daily={date:today,claimed:true};rpg.coins+=100;rpg.xp+=50;recalcLevel();saveRPG();savePortal();persistPortal();
+ portal.daily={date:today,claimed:true};rpg.coins+=100;rpg.xp+=50;recalcLevel();saveRPG();savePortal();if(apiToken)api('/api/rpg/daily',{method:'POST'}).then(d=>{if(d.player){rpg.lives=d.player.lives;rpg.coins=d.player.coins;rpg.xp=d.player.xp;rpg.level=d.player.level;rpg.nextLifeAt=d.player.next_life_at||0;saveRPG();updateRPGHud()}}).catch(()=>{});
  document.querySelector('#dailyBonus').innerHTML='<div class="bonus-box">🎉 +100 🪙 e +50 XP recebidos!</div>';
 }
 function renderMissions(){
@@ -545,7 +550,11 @@ const SHOP=[
 function renderShop(){
  const el=document.querySelector('#shopGrid');if(!el)return;
  el.innerHTML=SHOP.map(x=>{const owned=portal.purchases.includes(x[0]);return '<div class="shop-item"><div class="shop-art">'+x[1]+'</div><b>'+x[2]+'</b><small>'+x[3]+' 🪙</small><button class="primary" data-buy="'+x[0]+'" '+(owned?'disabled':'')+'>'+(owned?'ADQUIRIDO':'COMPRAR')+'</button></div>'}).join('');
- el.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{const x=SHOP.find(y=>y[0]===b.dataset.buy);if(!x||portal.purchases.includes(x[0]))return;if(rpg.coins<x[3]){alert('Moedas insuficientes.');return}rpg.coins-=x[3];portal.purchases.push(x[0]);saveRPG();savePortal();persistPortal();persistRPGState();renderShop();renderProfile()});
+ el.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{const x=SHOP.find(y=>y[0]===b.dataset.buy);if(!x||portal.purchases.includes(x[0]))return;if(rpg.coins<x[3]){alert('Moedas insuficientes.');return}if(apiToken){
+  api('/api/rpg/purchase',{method:'POST',body:JSON.stringify({item:x[0],cost:x[3]})}).then(d=>{if(!d.purchased){alert('Compra não realizada.');return}rpg.coins=d.player.coins;rpg.xp=d.player.xp;rpg.level=d.player.level;portal.purchases.push(x[0]);saveRPG();savePortal();renderShop();renderProfile()}).catch(()=>alert('Não foi possível concluir a compra.'));
+ }else{
+  rpg.coins-=x[3];portal.purchases.push(x[0]);saveRPG();savePortal();renderShop();renderProfile()
+ }});
 }
 function renderProfile(){
  const el=document.querySelector('#profileCard');if(!el)return;
@@ -596,7 +605,10 @@ async function persistRPGState(){
 }
 async function persistRPGPhase(id,phase,stars,score=0){
  if(!apiToken)return;
- try{await api('/api/progress',{method:'POST',body:JSON.stringify({player:{lives:rpg.lives,coins:rpg.coins,xp:rpg.xp,level:rpg.level,nextLifeAt:rpg.nextLifeAt||0},phase:{gameId:id,phase,stars,score}})})}catch(e){}
+ try{
+  const d=await api('/api/rpg/reward',{method:'POST',body:JSON.stringify({gameId:id,phase,stars,score})});
+  if(d.player){rpg.lives=d.player.lives;rpg.coins=d.player.coins;rpg.xp=d.player.xp;rpg.level=d.player.level;rpg.nextLifeAt=d.player.next_life_at||0;saveRPG();updateRPGHud()}
+ }catch(e){}
 }
 setInterval(()=>{if(apiToken)persistRPGState()},30000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&apiToken)persistRPGState()});
