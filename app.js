@@ -389,3 +389,35 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-filter]');
 document.querySelector('#showProgress')?.addEventListener('click',()=>{openPanel('#progressPanel');renderProgress()});
 document.querySelector('#showMissions')?.addEventListener('click',()=>{openPanel('#missionsPanel');renderMissions()});
 document.querySelector('#showProfile')?.addEventListener('click',()=>{openPanel('#profilePanel');renderProfile()});
+
+// ===== MULTIPLAYER E SINCRONIZACAO =====
+let currentRoom='';
+async function syncRPG(){
+ if(!apiToken)return;
+ try{
+  const d=await api('/api/progress');
+  if(d.player){Object.assign(rpg,d.player);saveRPG()}
+  (d.phases||[]).forEach(p=>{const k=p.game_id+':'+p.phase;rpg.stars[k]=Math.max(rpg.stars[k]||0,p.stars||0);});
+  saveRPG();refreshAchievements();
+ }catch(e){}
+}
+async function persistRPGPhase(id,phase,stars,score=0){
+ if(!apiToken)return;
+ try{await api('/api/progress',{method:'POST',body:JSON.stringify({player:{lives:rpg.lives,coins:rpg.coins,xp:rpg.xp,level:rpg.level},phase:{gameId:id,phase,stars,score}})})}catch(e){}
+}
+const prevReward=addRPGReward;
+addRPGReward=function(id,phase,stars){prevReward(id,phase,stars);persistRPGPhase(id,phase,stars,stars*100+phase)};
+document.querySelector('#createRoom')?.addEventListener('click',async()=>{
+ if(!apiToken){document.querySelector('#roomMsg').textContent='Faça login para criar uma sala.';return}
+ try{const d=await api('/api/rooms',{method:'POST',body:JSON.stringify({gameId:'tictactoe'})});currentRoom=d.code;document.querySelector('#roomMsg').textContent='Sala '+d.code+' criada. Compartilhe o código.';pollRoom()}catch(e){document.querySelector('#roomMsg').textContent=e.message}
+});
+document.querySelector('#joinRoom')?.addEventListener('click',async()=>{
+ if(!apiToken){document.querySelector('#roomMsg').textContent='Faça login para entrar em uma sala.';return}
+ const code=document.querySelector('#roomCode').value.trim().toUpperCase();
+ try{const d=await api('/api/rooms/'+code+'/join',{method:'POST'});currentRoom=code;document.querySelector('#roomMsg').textContent='Entrou na sala '+code+' • '+d.status;pollRoom()}catch(e){document.querySelector('#roomMsg').textContent=e.message}
+});
+async function pollRoom(){
+ if(!currentRoom||!apiToken)return;
+ try{const d=await api('/api/rooms/'+currentRoom);document.querySelector('#roomMsg').textContent='Sala '+currentRoom+' • '+(d.room.status==='ready'?'🟢 2 jogadores prontos!':'🟡 aguardando adversário...');if(d.room.status!=='ready')setTimeout(pollRoom,2000)}catch(e){}
+}
+syncRPG();
