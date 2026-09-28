@@ -48,14 +48,16 @@
     <div id="viewTitle" class="view-title hidden"></div><div id="grid" class="grid"></div>
   </section>
 <section id="rankingPanel" class="section feature-panel hidden"><div class="section-head"><div><span class="eyebrow">PLACAR LOCAL</span><h2>Ranking</h2></div><button class="close-panel" data-close-panel>Fechar</button></div><div id="rankingList"></div><p class="panel-note">O ranking atual é salvo neste navegador. Um ranking global precisa de banco de dados e login no servidor.</p></section>
-<section id="loginPanel" class="section feature-panel hidden"><div class="section-head"><div><span class="eyebrow">PERFIL</span><h2>Login</h2></div><button class="close-panel" data-close-panel>Fechar</button></div><div class="login-box">
-<p>Entre ou crie sua conta para sincronizar favoritos, recordes e ranking.</p>
-<div class="auth-tabs"><button id="tabLogin" class="auth-tab active">Entrar</button><button id="tabRegister" class="auth-tab">Criar conta</button></div>
-<input id="loginName" maxlength="40" placeholder="Nome ou apelido">
-<input id="loginEmail" type="email" placeholder="E-mail">
-<input id="loginPassword" type="password" placeholder="Senha (mínimo 6 caracteres)">
-<button class="primary" id="loginBtn">Entrar no Games</button>
+<section id="loginPanel" class="section feature-panel hidden"><div class="section-head"><div><span class="eyebrow">PERFIL</span><h2>Login</h2></div><button class="close-panel" data-close-panel>Fechar</button></div><div class="login-box auth-box">
+<div class="auth-hero"><div class="auth-icon">🎮</div><div><h3 id="authTitle">Entrar no Games</h3><p>Salve seu progresso, recordes, favoritos e conquistas na sua conta.</p></div></div>
+<div class="auth-tabs"><button id="tabLogin" class="auth-tab active">🔐 Entrar</button><button id="tabRegister" class="auth-tab">✨ Criar minha conta</button></div>
+<div id="registerFields" class="register-fields hidden"><label>Nome ou apelido<input id="loginName" maxlength="40" autocomplete="nickname" placeholder="Como você quer aparecer no ranking?"></label></div>
+<label>E-mail<input id="loginEmail" type="email" autocomplete="email" placeholder="seuemail@exemplo.com"></label>
+<label>Senha<input id="loginPassword" type="password" autocomplete="current-password" placeholder="Mínimo 6 caracteres"></label>
+<div id="confirmPasswordWrap" class="register-fields hidden"><label>Confirmar senha<input id="loginPasswordConfirm" type="password" autocomplete="new-password" placeholder="Digite a senha novamente"></label></div>
+<button class="primary auth-submit" id="loginBtn">Entrar no Games</button>
 <div id="authMsg" class="panel-note"></div>
+<div class="auth-benefits"><span>💾 Progresso</span><span>🏆 Ranking</span><span>❤️ Favoritos</span><span>🎯 Conquistas</span></div>
 </div></section>
 <section id="adminPanel" class="section feature-panel hidden">
 <div class="section-head"><div><span class="eyebrow">ADMINISTRAÇÃO</span><h2>Painel ADM</h2></div><button class="close-panel" data-close-panel>Fechar</button></div>
