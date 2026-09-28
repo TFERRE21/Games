@@ -229,45 +229,64 @@ function campaignMission(id,l){
 }
 function buildCampaignChallenge(id,l){
   const box=document.querySelector('#campaignChallenge'),g=games.find(x=>x.id===id)||games[0];
+  window.campaignRun={id,phase:l,started:Date.now(),failed:false,completed:false};
   const target=5+Math.floor(l*1.5);
+  const difficulty=l<=10?'FÁCIL':l<=30?'NORMAL':l<=60?'DIFÍCIL':'ÉPICO';
+  const intro='<div class="phase-info"><span>🎯 OBJETIVO</span><span>⚔️ '+difficulty+'</span><span>🌎 MUNDO '+worldForPhase(l)+'</span></div>';
   if(g.cat==='cooking'){
-    const ingredients=['🍅','🧀','🍞','🍫','🥕','🍓','🥚','🥩'], need=[ingredients[l%8],ingredients[(l+2)%8],ingredients[(l+4)%8]];
-    box.innerHTML='<p>Escolha exatamente: <b>'+need.join(' ')+'</b></p><div class="campaign-options">'+ingredients.map(x=>'<button data-v="'+x+'">'+x+'</button>').join('')+'</div>';
+    const ingredients=['🍅','🧀','🍞','🍫','🥕','🍓','🥚','🥩'],need=[ingredients[l%8],ingredients[(l+2)%8],ingredients[(l+4)%8]];
+    box.innerHTML=intro+'<p>Monte a receita escolhendo <b>exatamente 3 ingredientes</b>.</p><div class="campaign-options">'+ingredients.map(x=>'<button type="button" data-v="'+x+'">'+x+'</button>').join('')+'</div><div class="mission-hint">Receita: '+need.join(' • ')+'</div>';
+    box.dataset.need=JSON.stringify(need);
     box.querySelectorAll('button').forEach(b=>b.onclick=()=>b.classList.toggle('selected'));
   }else if(g.cat==='coloring'||g.cat==='girls'){
-    box.innerHTML='<p>Complete <b>'+Math.min(10,3+Math.floor(l/10))+'</b> escolhas de estilo/cores.</p><div class="campaign-options">'+['❤️','💙','💚','💜','💛','🩷','🖤','🤍'].map(x=>'<button data-v="'+x+'">'+x+'</button>').join('')+'</div><div id="choiceCount">0 escolhas</div>';
-    let n=0;box.querySelectorAll('button').forEach(b=>b.onclick=()=>{n++;document.querySelector('#choiceCount').textContent=n+' escolhas'});
+    const total=Math.min(10,3+Math.floor(l/10));
+    box.innerHTML=intro+'<p>Crie uma combinação com <b>'+total+' escolhas diferentes</b>.</p><div class="campaign-options">'+['❤️','💙','💚','💜','💛','🩷','🖤','🤍'].map(x=>'<button type="button" data-v="'+x+'">'+x+'</button>').join('')+'</div><div id="choiceCount">0 / '+total+'</div>';
+    const chosen=new Set();box.querySelectorAll('button').forEach(b=>b.onclick=()=>{chosen.has(b.dataset.v)?chosen.delete(b.dataset.v):chosen.add(b.dataset.v);b.classList.toggle('selected',chosen.has(b.dataset.v));document.querySelector('#choiceCount').textContent=chosen.size+' / '+total});
+    box.dataset.target=total;
   }else if(g.cat==='flight'||g.cat==='sim'){
-    box.innerHTML='<p>Regule os controles até atingir a faixa da missão.</p><input id="missionControl" type="range" min="0" max="100" value="'+(30+(l*7)%61)+'"><div class="score">Controle: <b id="missionValue">'+document.querySelector('#missionControl')?.value+'</b>%</div>';
+    const targetValue=35+((l*13)%46);
+    box.innerHTML=intro+'<p>Ajuste o controle para <b>'+targetValue+'%</b> (tolerância ±5).</p><input id="missionControl" class="mission-range" type="range" min="0" max="100" value="50"><div class="control-readout">Controle <b id="missionValue">50</b>%</div>';
+    box.dataset.target=targetValue;
     box.querySelector('#missionControl').oninput=e=>document.querySelector('#missionValue').textContent=e.target.value;
   }else if(g.cat==='racing'){
-    box.innerHTML='<p>Tempo-alvo: <b>'+Math.max(8,35-Math.floor(l/4))+'s</b></p><button class="primary" id="raceStart">🏎️ INICIAR CORRIDA</button><div id="raceTimer" class="score">Pronto</div>';
-    let t=null,start=0;box.querySelector('#raceStart').onclick=()=>{if(t)return;start=Date.now();t=setInterval(()=>{let s=((Date.now()-start)/1000).toFixed(1);document.querySelector('#raceTimer').textContent=s+'s';if(+s>=Math.max(8,35-Math.floor(l/4))){clearInterval(t);t=null}},100)};
+    const targetTime=Math.max(6,16-Math.floor(l/10));
+    box.innerHTML=intro+'<p>Complete a volta entre <b>'+targetTime+' e '+(targetTime+7)+' segundos</b>.</p><button type="button" class="primary" id="raceStart">🏁 LARGAR</button><div id="raceTimer" class="race-timer">Pronto para largar</div>';
+    let timer=null,start=0;
+    box.querySelector('#raceStart').onclick=()=>{
+      if(timer)return;start=Date.now();box.querySelector('#raceStart').disabled=true;box.querySelector('#raceStart').textContent='🏎️ CORRENDO...';
+      timer=setInterval(()=>{const sec=(Date.now()-start)/1000;box.querySelector('#raceTimer').textContent=sec.toFixed(1)+'s';if(sec>=targetTime+7){clearInterval(timer);timer=null;box.dataset.raceTime=sec.toFixed(1);box.querySelector('#raceTimer').textContent='⏱️ '+sec.toFixed(1)+'s — tente novamente mais rápido';box.querySelector('#raceStart').disabled=false;box.querySelector('#raceStart').textContent='🏁 NOVA TENTATIVA'}},100);
+    };
   }else if(g.cat==='puzzle'){
     const a=2+(l%12),b=3+((l*3)%17),ans=a+b;
-    box.innerHTML='<p>Quanto é <b>'+a+' + '+b+'?</b></p><input id="missionAnswer" type="number" placeholder="Resposta">';
+    box.innerHTML=intro+'<p>Resolva sem calculadora: <b>'+a+' + '+b+' = ?</b></p><input id="missionAnswer" type="number" inputmode="numeric" placeholder="Sua resposta"><div class="mission-hint">Uma resposta correta conclui a fase.</div>';
     box.dataset.answer=ans;
   }else{
-    box.innerHTML='<p>Alvo da fase: <b>'+target+'</b> pontos/ações.</p><button class="primary" id="missionTap">🎯 FAZER AÇÃO</button><div id="tapCount" class="score">0 / '+target+'</div>';
-    let n=0;box.querySelector('#missionTap').onclick=()=>{n++;document.querySelector('#tapCount').textContent=n+' / '+target};
+    box.innerHTML=intro+'<p>Complete o desafio para avançar.</p><button type="button" class="primary" id="missionTap">🎯 FAZER AÇÃO</button><div id="tapCount" class="score">0 / '+target+'</div>';
+    let n=0;box.querySelector('#missionTap').onclick=()=>{n++;document.querySelector('#tapCount').textContent=n+' / '+target;if(n>=target)box.querySelector('#missionTap').textContent='✅ OBJETIVO ATINGIDO'};
     box.dataset.target=target;
   }
   document.querySelector('#campaignCheck').onclick=()=>completeCampaignPhase(id,l);
 }
 function completeCampaignPhase(id,l){
-  const g=games.find(x=>x.id===id)||games[0], box=document.querySelector('#campaignChallenge'); let ok=true;
+  const g=games.find(x=>x.id===id)||games[0],box=document.querySelector('#campaignChallenge');let ok=false;
   if(g.cat==='puzzle')ok=Number(box.querySelector('#missionAnswer')?.value)===Number(box.dataset.answer);
-  else if(g.cat==='cooking')ok=box.querySelectorAll('.selected').length===3;
-  else if(g.cat==='coloring'||g.cat==='girls')ok=(Number(box.querySelector('#choiceCount')?.textContent)||0)>=Math.min(10,3+Math.floor(l/10));
-  else if(g.cat==='flight'||g.cat==='sim')ok=Number(box.querySelector('#missionControl')?.value)>=30&&Number(box.querySelector('#missionControl')?.value)<=80;
-  else if(g.cat==='racing')ok=true;
+  else if(g.cat==='cooking'){const selected=[...box.querySelectorAll('.selected')].map(b=>b.dataset.v),need=JSON.parse(box.dataset.need||'[]');ok=selected.length===3&&need.every(x=>selected.includes(x))}
+  else if(g.cat==='coloring'||g.cat==='girls')ok=(Number(box.querySelector('#choiceCount')?.textContent?.split('/')[0])||0)>=Number(box.dataset.target||1);
+  else if(g.cat==='flight'||g.cat==='sim'){const v=Number(box.querySelector('#missionControl')?.value||0),t=Number(box.dataset.target||50);ok=Math.abs(v-t)<=5}
+  else if(g.cat==='racing'){const t=Number(box.dataset.raceTime||0),min=Math.max(6,16-Math.floor(l/10)),max=min+7;ok=t>=min&&t<=max}
   else ok=(Number(box.querySelector('#tapCount')?.textContent?.split('/')[0])||0)>=Number(box.dataset.target||1);
-  if(!ok){if(!loseLife())document.querySelector('#campaignScore').textContent='💔 Sem vidas! Aguarde ou conclua outras missões para recuperar.';else document.querySelector('#campaignScore').textContent='❌ Missão falhou. Você perdeu 1 vida.';return}
-  const stars=phaseStars(id,l,true),next=Math.min(100,l+1);saveProgress(id,next);addRPGReward(id,l,stars);
-  document.querySelector('#campaignScore').textContent=l===100?'🏆 CAMPANHA COMPLETA! 100 fases concluídas!':'✅ Fase '+l+' concluída! '+('⭐'.repeat(stars))+' • +'+(stars*10)+' moedas • +'+(stars*25)+' XP • Mundo '+worldForPhase(l);
-  document.querySelector('#campaignCheck').disabled=true;const nb=document.querySelector('#campaignNext');nb.disabled=false;nb.onclick=()=>campaignGame(id);document.querySelector('#campaignBar').style.width=l+'%';updateRPGHud();
+  if(!ok){
+    window.campaignRun.failed=true;
+    if(!loseLife()){document.querySelector('#campaignScore').textContent='💔 Sem vidas. Use o bônus diário ou volte depois para recuperar.'}
+    else{document.querySelector('#campaignScore').textContent='❌ Desafio não concluído. −1 vida. Revise o objetivo e tente novamente.';document.querySelector('#campaignCheck').classList.add('shake')}
+    return;
+  }
+  const attempts=window.campaignRun.failed?2:1;
+  const stars=attempts===1?3:2;
+  const next=Math.min(100,l+1);saveProgress(id,next);addRPGReward(id,l,stars);
+  document.querySelector('#campaignScore').textContent=l===100?'🏆 CAMPANHA COMPLETA! 100 FASES!':'✅ Fase '+l+' concluída! '+('⭐'.repeat(stars))+' • +'+(stars*10)+' 🪙 • +'+(stars*25)+' XP';
+  document.querySelector('#campaignCheck').disabled=true;document.querySelector('#campaignNext').disabled=false;document.querySelector('#campaignNext').onclick=()=>campaignGame(id);document.querySelector('#campaignBar').style.width=l+'%';updateRPGHud();
 }
-
 
 (function injectCampaignStyle(){if(document.querySelector('#campaignStyle'))return;const s=document.createElement('style');s.id='campaignStyle';s.textContent=`
 .campaign-wrap{max-width:900px;margin:auto}.campaign-head{display:flex;justify-content:space-between;gap:20px;align-items:center}.campaign-level{font-size:20px;padding:12px 16px;border:1px solid #33405a;border-radius:12px}.campaign-progress{height:12px;background:#182338;border-radius:20px;overflow:hidden;margin:14px 0 24px}.campaign-progress span{display:block;height:100%;background:#18d6a0;transition:width .3s}.campaign-body{text-align:center;padding:18px}.campaign-icon{font-size:90px}.campaign-options{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:18px}.campaign-options button{font-size:34px;padding:10px 15px;background:#151f31;color:white;border:1px solid #33405a;border-radius:12px;cursor:pointer}.campaign-options button.selected{outline:3px solid #18d6a0;transform:scale(1.06)}.campaign-actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:22px}.campaign-actions button:disabled{opacity:.45;cursor:not-allowed}`;document.head.appendChild(s)})();
