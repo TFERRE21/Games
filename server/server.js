@@ -34,7 +34,37 @@ CREATE TABLE IF NOT EXISTS scores(
  score INTEGER NOT NULL DEFAULT 0,
  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_scores_game_score ON scores(game_id,score DESC);\nCREATE TABLE IF NOT EXISTS rooms(\n code TEXT PRIMARY KEY,\n game_id TEXT NOT NULL DEFAULT 'tictactoe',\n host_id INTEGER NOT NULL,\n guest_id INTEGER,\n status TEXT NOT NULL DEFAULT 'waiting',\n created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\nCREATE TABLE IF NOT EXISTS player_progress(\n user_id INTEGER PRIMARY KEY,\n lives INTEGER NOT NULL DEFAULT 5,\n coins INTEGER NOT NULL DEFAULT 0,\n xp INTEGER NOT NULL DEFAULT 0,\n level INTEGER NOT NULL DEFAULT 1,\n updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\nCREATE TABLE IF NOT EXISTS portal_state(\n user_id INTEGER PRIMARY KEY,\n data TEXT NOT NULL DEFAULT '{}',\n updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\nCREATE TABLE IF NOT EXISTS phase_progress(\n user_id INTEGER NOT NULL,\n game_id TEXT NOT NULL,\n phase INTEGER NOT NULL,\n stars INTEGER NOT NULL DEFAULT 0,\n score INTEGER NOT NULL DEFAULT 0,\n updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,\n PRIMARY KEY(user_id,game_id,phase)\n);
+CREATE INDEX IF NOT EXISTS idx_scores_game_score ON scores(game_id,score DESC);
+CREATE TABLE IF NOT EXISTS rooms(
+ code TEXT PRIMARY KEY,
+ game_id TEXT NOT NULL DEFAULT 'tictactoe',
+ host_id INTEGER NOT NULL,
+ guest_id INTEGER,
+ status TEXT NOT NULL DEFAULT 'waiting',
+ created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS player_progress(
+ user_id INTEGER PRIMARY KEY,
+ lives INTEGER NOT NULL DEFAULT 5,
+ coins INTEGER NOT NULL DEFAULT 0,
+ xp INTEGER NOT NULL DEFAULT 0,
+ level INTEGER NOT NULL DEFAULT 1,
+ updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS portal_state(
+ user_id INTEGER PRIMARY KEY,
+ data TEXT NOT NULL DEFAULT '{}',
+ updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS phase_progress(
+ user_id INTEGER NOT NULL,
+ game_id TEXT NOT NULL,
+ phase INTEGER NOT NULL,
+ stars INTEGER NOT NULL DEFAULT 0,
+ score INTEGER NOT NULL DEFAULT 0,
+ updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY(user_id,game_id,phase)
+);
 `);
 
 try{db.exec("ALTER TABLE player_progress ADD COLUMN next_life_at INTEGER NOT NULL DEFAULT 0")}catch(e){}
@@ -116,7 +146,20 @@ app.post('/api/progress',auth,(req,res)=>{
  }
  res.json({ok:true});
 });
-app.get('/api/portal',auth,(req,res)=>{\n const row=db.prepare('SELECT data FROM portal_state WHERE user_id=?').get(req.user.id);\n let data={};\n try{data=row?JSON.parse(row.data||'{}'):{};}catch(e){}\n res.json({portal:data});\n});\napp.post('/api/portal',auth,(req,res)=>{\n const data=req.body&&req.body.portal&&typeof req.body.portal==='object'?req.body.portal:{};\n const safe={nickname:String(data.nickname||'Jogador').slice(0,30),purchases:Array.isArray(data.purchases)?data.purchases.slice(0,100).map(String):[],achievements:Array.isArray(data.achievements)?data.achievements.slice(0,100).map(String):[],daily:data.daily&&typeof data.daily==='object'?{date:String(data.daily.date||'').slice(0,10),claimed:Boolean(data.daily.claimed)}:{date:'',claimed:false},missions:data.missions&&typeof data.missions==='object'?data.missions:{}};\n db.prepare('INSERT INTO portal_state(user_id,data,updated_at) VALUES(?,?,CURRENT_TIMESTAMP) ON CONFLICT(user_id) DO UPDATE SET data=excluded.data,updated_at=CURRENT_TIMESTAMP').run(req.user.id,JSON.stringify(safe));\n res.json({ok:true,portal:safe});\n});\n\napp.get('/api/me',auth,(req,res)=>{
+app.get('/api/portal',auth,(req,res)=>{
+ const row=db.prepare('SELECT data FROM portal_state WHERE user_id=?').get(req.user.id);
+ let data={};
+ try{data=row?JSON.parse(row.data||'{}'):{};}catch(e){}
+ res.json({portal:data});
+});
+app.post('/api/portal',auth,(req,res)=>{
+ const data=req.body&&req.body.portal&&typeof req.body.portal==='object'?req.body.portal:{};
+ const safe={nickname:String(data.nickname||'Jogador').slice(0,30),purchases:Array.isArray(data.purchases)?data.purchases.slice(0,100).map(String):[],achievements:Array.isArray(data.achievements)?data.achievements.slice(0,100).map(String):[],daily:data.daily&&typeof data.daily==='object'?{date:String(data.daily.date||'').slice(0,10),claimed:Boolean(data.daily.claimed)}:{date:'',claimed:false},missions:data.missions&&typeof data.missions==='object'?data.missions:{}};
+ db.prepare('INSERT INTO portal_state(user_id,data,updated_at) VALUES(?,?,CURRENT_TIMESTAMP) ON CONFLICT(user_id) DO UPDATE SET data=excluded.data,updated_at=CURRENT_TIMESTAMP').run(req.user.id,JSON.stringify(safe));
+ res.json({ok:true,portal:safe});
+});
+
+app.get('/api/me',auth,(req,res)=>{
  const u=db.prepare('SELECT id,name,email,role,created_at FROM users WHERE id=?').get(req.user.id);
  if(!u)return res.status(404).json({error:'Usuário não encontrado'});
  res.json({user:u});
@@ -144,7 +187,13 @@ app.post('/api/scores',auth,(req,res)=>{
  res.json({ok:true,best});
 });
 
-app.get('/api/ranking/phase/:gameId/:phase',(req,res)=>{\n const gameId=String(req.params.gameId).slice(0,80),phase=Math.max(1,Math.min(1000,Number(req.params.phase)||1));\n const rows=db.prepare(`SELECT p.score,u.name FROM phase_progress p JOIN users u ON u.id=p.user_id WHERE p.game_id=? AND p.phase=? ORDER BY p.score DESC LIMIT 100`).all(gameId,phase);\n res.json({gameId,phase,ranking:rows});\n});\n\napp.get('/api/ranking',(req,res)=>{
+app.get('/api/ranking/phase/:gameId/:phase',(req,res)=>{
+ const gameId=String(req.params.gameId).slice(0,80),phase=Math.max(1,Math.min(1000,Number(req.params.phase)||1));
+ const rows=db.prepare(`SELECT p.score,u.name FROM phase_progress p JOIN users u ON u.id=p.user_id WHERE p.game_id=? AND p.phase=? ORDER BY p.score DESC LIMIT 100`).all(gameId,phase);
+ res.json({gameId,phase,ranking:rows});
+});
+
+app.get('/api/ranking',(req,res)=>{
  const rows=db.prepare(`
  SELECT s.game_id, MAX(s.score) score, u.name
  FROM scores s JOIN users u ON u.id=s.user_id
