@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Games Online — Arcade</title>
+  <meta name="description" content="Portal de jogos online HTML5: arcade, clássicos, corrida e simuladores.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="logo">🎮</span><div><strong>GAMES</strong><small>ONLINE ARCADE</small></div></div>
+  <nav>
+    <button data-filter="all" class="navbtn active">Início</button>
+    <button data-filter="arcade" class="navbtn">Arcade</button>
+    <button data-filter="classic" class="navbtn">Clássicos</button>
+    <button data-filter="sim" class="navbtn">Simuladores</button>
+  </nav>
+</header>
+
+<main>
+  <section class="hero">
+    <div>
+      <span class="eyebrow">JOGUE AGORA • SEM INSTALAÇÃO</span>
+      <h1>Seu arcade online.</h1>
+      <p>Vários jogos rápidos para computador e celular. Escolha um jogo e comece.</p>
+      <button class="primary" data-launch="platformer">▶ Jogar agora</button>
+    </div>
+    <div class="hero-card"><div class="pixel">INSERT<br>COIN</div><span>HTML5 • CANVAS</span></div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><div><span class="eyebrow">CATÁLOGO</span><h2>Jogos</h2></div><input id="search" placeholder="🔎 Procurar jogo..."></div>
+    <div id="grid" class="grid"></div>
+  </section>
+</main>
+
+<div id="modal" class="modal hidden">
+  <div class="modal-box">
+    <div class="modal-head"><div><span id="gameCategory" class="eyebrow"></span><h2 id="gameTitle"></h2></div><button id="close">✕</button></div>
+    <div id="gameArea"></div>
+  </div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
