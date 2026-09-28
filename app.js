@@ -23,11 +23,6 @@ const games=[
 {id:'fishing',name:'Simulador de Pesca',cat:'sim',icon:'🎣',desc:'Lance a linha e pesque.'},
 {id:'space',name:'Simulador Espacial',cat:'sim',icon:'🚀',desc:'Controle combustível e altitude.'},
 {id:'superplumber',name:'Super Plumber',cat:'arcade',icon:'🍄',desc:'Plataforma original com moedas e obstáculos.'},
-{id:'kartrush',name:'Kart Rush',cat:'sports',icon:'🏁',desc:'Corrida arcade original com pista infinita.'},
-{id:'citydriver',name:'City Driver',cat:'arcade',icon:'🌆',desc:'Direção urbana original em uma cidade fictícia.'},
-{id:'spacebattle',name:'Space Battle',cat:'arcade',icon:'👾',desc:'Nave contra ondas de inimigos.'},
-{id:'goalkeeper',name:'Goal Keeper',cat:'sports',icon:'🥅',desc:'Defenda o gol e faça sua pontuação.'},
-{id:'superplumber',name:'Super Plumber',cat:'arcade',icon:'🍄',desc:'Plataforma original com moedas e obstáculos.'},
 {id:'kartrush',name:'Kart Rush',cat:'sports',icon:'🏁',desc:'Corrida de kart arcade original.'},
 {id:'citydriver',name:'City Driver',cat:'arcade',icon:'🌆',desc:'Direção urbana em uma cidade fictícia.'},
 {id:'spacebattle',name:'Space Battle',cat:'arcade',icon:'👾',desc:'Nave contra ondas de inimigos.'},
@@ -47,7 +42,7 @@ const games=[
 {id:'motorcycle',name:'Moto Rush',cat:'racing',icon:'🏍️',desc:'Desvie de obstáculos em alta velocidade.'}
 ];
 const grid=document.querySelector('#grid'),modal=document.querySelector('#modal'),area=document.querySelector('#gameArea');
-function render(filter='all',q=''){grid.innerHTML=games.filter(g=>(filter==='all'||g.cat===filter)&&g.name.toLowerCase().includes(q.toLowerCase())).map(g=>`<article class="card" data-launch="${g.id}"><button class="fav-btn" onclick="toggleFavorite('${g.id}',event)">${state.favorites.includes(g.id)?'❤️':'🤍'}</button><div class="thumb">${g.icon}</div>`<h3>${g.name}</h3><p>${g.desc}</p><div class="tag">${g.cat.toUpperCase()} • JOGAR</div></article>`).join('');document.querySelectorAll('[data-launch]').forEach(b=>b.onclick=()=>launch(b.dataset.launch))}
+function render(filter='all',q=''){grid.innerHTML=games.filter(g=>(filter==='all'||g.cat===filter)&&g.name.toLowerCase().includes(q.toLowerCase())).map(g=>`<article class="card" data-launch="${g.id}"><button class="fav-btn" onclick="toggleFavorite('${g.id}',event)">${state.favorites.includes(g.id)?'❤️':'🤍'}</button><div class="thumb">${g.icon}</div><h3>${g.name}</h3><p>${g.desc}</p><div class="tag">${g.cat.toUpperCase()} • JOGAR</div></article>`).join('');document.querySelectorAll('[data-launch]').forEach(b=>b.onclick=()=>launch(b.dataset.launch))}
 document.querySelectorAll('.navbtn').forEach(b=>b.onclick=()=>{document.querySelectorAll('.navbtn').forEach(x=>x.classList.remove('active'));b.classList.add('active');render(b.dataset.filter,document.querySelector('#search').value)});
 document.querySelector('#search').oninput=e=>render(document.querySelector('.navbtn.active').dataset.filter,e.target.value);
 function closeGame(){modal.classList.add('hidden');area.innerHTML=''}
