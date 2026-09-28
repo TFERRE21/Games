@@ -37,6 +37,8 @@ CREATE TABLE IF NOT EXISTS scores(
 CREATE INDEX IF NOT EXISTS idx_scores_game_score ON scores(game_id,score DESC);\nCREATE TABLE IF NOT EXISTS rooms(\n code TEXT PRIMARY KEY,\n game_id TEXT NOT NULL DEFAULT 'tictactoe',\n host_id INTEGER NOT NULL,\n guest_id INTEGER,\n status TEXT NOT NULL DEFAULT 'waiting',\n created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\nCREATE TABLE IF NOT EXISTS player_progress(\n user_id INTEGER PRIMARY KEY,\n lives INTEGER NOT NULL DEFAULT 5,\n coins INTEGER NOT NULL DEFAULT 0,\n xp INTEGER NOT NULL DEFAULT 0,\n level INTEGER NOT NULL DEFAULT 1,\n updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\nCREATE TABLE IF NOT EXISTS phase_progress(\n user_id INTEGER NOT NULL,\n game_id TEXT NOT NULL,\n phase INTEGER NOT NULL,\n stars INTEGER NOT NULL DEFAULT 0,\n score INTEGER NOT NULL DEFAULT 0,\n updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,\n PRIMARY KEY(user_id,game_id,phase)\n);
 `);
 
+try{db.exec("ALTER TABLE player_progress ADD COLUMN next_life_at INTEGER NOT NULL DEFAULT 0")}catch(e){}
+
 const adminEmail=process.env.ADMIN_EMAIL;
 const adminPassword=process.env.ADMIN_PASSWORD;
 if(adminEmail&&adminPassword){
@@ -100,13 +102,13 @@ app.get('/api/rooms/:code',auth,(req,res)=>{
  if(!room)return res.status(404).json({error:'Sala não encontrada'});res.json({room});
 });
 app.get('/api/progress',auth,(req,res)=>{
- const p=db.prepare('SELECT lives,coins,xp,level FROM player_progress WHERE user_id=?').get(req.user.id)||{lives:5,coins:0,xp:0,level:1};
+ const p=db.prepare('SELECT lives,coins,xp,level,next_life_at FROM player_progress WHERE user_id=?').get(req.user.id)||{lives:5,coins:0,xp:0,level:1,next_life_at:0};
  const phases=db.prepare('SELECT game_id,phase,stars,score FROM phase_progress WHERE user_id=?').all(req.user.id);
  res.json({player:p,phases});
 });
 app.post('/api/progress',auth,(req,res)=>{
- const p=req.body.player||{};const lives=Math.max(0,Math.min(5,Math.floor(Number(p.lives)||0))),coins=Math.max(0,Math.min(100000000,Math.floor(Number(p.coins)||0))),xp=Math.max(0,Math.min(100000000,Math.floor(Number(p.xp)||0))),level=Math.max(1,Math.min(10000,Math.floor(Number(p.level)||1)));
- db.prepare('INSERT INTO player_progress(user_id,lives,coins,xp,level,updated_at) VALUES(?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(user_id) DO UPDATE SET lives=excluded.lives,coins=excluded.coins,xp=excluded.xp,level=excluded.level,updated_at=CURRENT_TIMESTAMP').run(req.user.id,lives,coins,xp,level);
+ const p=req.body.player||{};const nextLifeAt=Math.max(0,Math.floor(Number(p.nextLifeAt)||0));const lives=Math.max(0,Math.min(5,Math.floor(Number(p.lives)||0))),coins=Math.max(0,Math.min(100000000,Math.floor(Number(p.coins)||0))),xp=Math.max(0,Math.min(100000000,Math.floor(Number(p.xp)||0))),level=Math.max(1,Math.min(10000,Math.floor(Number(p.level)||1)));
+ db.prepare('INSERT INTO player_progress(user_id,lives,coins,xp,level,next_life_at,updated_at) VALUES(?,?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(user_id) DO UPDATE SET lives=excluded.lives,coins=excluded.coins,xp=excluded.xp,level=excluded.level,next_life_at=excluded.next_life_at,updated_at=CURRENT_TIMESTAMP').run(req.user.id,lives,coins,xp,level,nextLifeAt);
  const phase=req.body.phase;
  if(phase&&phase.gameId){
   const gameId=String(phase.gameId).slice(0,80),ph=Math.max(1,Math.min(1000,Math.floor(Number(phase.phase)||1))),stars=Math.max(0,Math.min(3,Math.floor(Number(phase.stars)||0))),score=Math.max(0,Math.min(100000000,Math.floor(Number(phase.score)||0)));
