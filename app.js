@@ -24,7 +24,7 @@ const games=[
 {id:'space',name:'Simulador Espacial',cat:'sim',icon:'🚀',desc:'Controle combustível e altitude.'}
 ];
 const grid=document.querySelector('#grid'),modal=document.querySelector('#modal'),area=document.querySelector('#gameArea');
-function render(filter='all',q=''){grid.innerHTML=games.filter(g=>(filter==='all'||g.cat===filter)&&g.name.toLowerCase().includes(q.toLowerCase())).map(g=>`<article class="card" data-launch="${g.id}"><div class="thumb">${g.icon}</div><h3>${g.name}</h3><p>${g.desc}</p><div class="tag">${g.cat.toUpperCase()} • JOGAR</div></article>`).join('');document.querySelectorAll('[data-launch]').forEach(b=>b.onclick=()=>launch(b.dataset.launch))}
+function render(filter='all',q=''){grid.innerHTML=games.filter(g=>(filter==='all'||g.cat===filter)&&g.name.toLowerCase().includes(q.toLowerCase())).map(g=>`<article class="card" data-launch="${g.id}"><button class="fav-btn" onclick="toggleFavorite('${g.id}',event)">${state.favorites.includes(g.id)?'❤️':'🤍'}</button><div class="thumb">${g.icon}</div>`<h3>${g.name}</h3><p>${g.desc}</p><div class="tag">${g.cat.toUpperCase()} • JOGAR</div></article>`).join('');document.querySelectorAll('[data-launch]').forEach(b=>b.onclick=()=>launch(b.dataset.launch))}
 document.querySelectorAll('.navbtn').forEach(b=>b.onclick=()=>{document.querySelectorAll('.navbtn').forEach(x=>x.classList.remove('active'));b.classList.add('active');render(b.dataset.filter,document.querySelector('#search').value)});
 document.querySelector('#search').oninput=e=>render(document.querySelector('.navbtn.active').dataset.filter,e.target.value);
 function closeGame(){modal.classList.add('hidden');area.innerHTML=''}
@@ -57,3 +57,35 @@ function farm(){area.innerHTML='<div class="game-wrap"><h3>🚜 Fazenda</h3><p>�
 function fishing(){area.innerHTML='<div class="game-wrap"><div style="font-size:100px;cursor:pointer;text-align:center" id="fish">🎣</div><div id="fs" class="score">Peixes: 0 • Clique para lançar</div></div>';let n=0;fish.onclick=()=>{if(Math.random()>.35){n++;fs.textContent='🐟 Peixes: '+n+' • Boa pescaria!'}else fs.textContent='🌊 Nada fisgou. Tente de novo.'}}
 function space(){vehicle('Simulador Espacial','🚀',900,.0002)}
 render();
+
+// ===== PERFIL, FAVORITOS, RECENTES E RECORDES =====
+const STORE='games_online_v2';
+const state=JSON.parse(localStorage.getItem(STORE)||'{}');
+state.user=state.user||null; state.favorites=state.favorites||[]; state.recent=state.recent||[]; state.records=state.records||{};
+function saveState(){localStorage.setItem(STORE,JSON.stringify(state));updateDashboard()}
+function updateDashboard(){
+ const vals=Object.values(state.records); const best=vals.length?Math.max(...vals):0;
+ document.querySelector('#bestScore').textContent=best;
+ document.querySelector('#playedCount').textContent=state.recent.length;
+ document.querySelector('#favCount').textContent=state.favorites.length;
+ document.querySelector('#navProfile').textContent=state.user?'👤 '+state.user:'👤 Entrar';
+ const bar=document.querySelector('#accountBar'); if(state.user){bar.classList.remove('hidden');bar.textContent='Olá, '+state.user+'! Seus dados estão salvos neste navegador.'}else bar.classList.add('hidden');
+}
+function toggleFavorite(id,e){e.stopPropagation();const i=state.favorites.indexOf(id);if(i>=0)state.favorites.splice(i,1);else state.favorites.push(id);saveState();render(document.querySelector('.navbtn.active')?.dataset.filter||'all',document.querySelector('#search').value)}
+function showGames(list,title){document.querySelector('#viewTitle').classList.remove('hidden');document.querySelector('#viewTitle').textContent=title;const active=document.querySelector('.navbtn.active');render(active?active.dataset.filter:'all','');const grid=document.querySelector('#grid');grid.innerHTML=list.map(g=>`<article class="card" data-launch="${g.id}"><button class="fav-btn" onclick="toggleFavorite('${g.id}',event)">${state.favorites.includes(g.id)?'❤️':'🤍'}</button><div class="thumb">${g.icon}</div><h3>${g.name}</h3><p>${g.desc}</p><div class="tag">${g.cat.toUpperCase()} • JOGAR</div></article>`).join('');document.querySelectorAll('[data-launch]').forEach(b=>b.onclick=()=>launch(b.dataset.launch))}
+function addRecent(id){state.recent=[id,...state.recent.filter(x=>x!==id)].slice(0,12);saveState()}
+function openPanel(id){document.querySelectorAll('.feature-panel').forEach(x=>x.classList.add('hidden'));document.querySelector(id).classList.remove('hidden');document.querySelector(id).scrollIntoView({behavior:'smooth'})}
+document.querySelector('#navProfile').onclick=()=>openPanel('#loginPanel');
+document.querySelector('#loginBtn').onclick=()=>{const n=document.querySelector('#loginName').value.trim();if(n){state.user=n;saveState();document.querySelector('#loginPanel').classList.add('hidden')}};
+document.querySelector('#showRecent').onclick=()=>showGames(state.recent.map(id=>games.find(g=>g.id===id)).filter(Boolean),'🕘 Jogos recentes');
+document.querySelector('#showFavorites').onclick=()=>showGames(state.favorites.map(id=>games.find(g=>g.id===id)).filter(Boolean),'❤️ Meus favoritos');
+document.querySelector('#showRanking').onclick=()=>{const rows=Object.entries(state.records).sort((a,b)=>b[1]-a[1]).slice(0,20);document.querySelector('#rankingList').innerHTML=rows.length?rows.map((r,i)=>`<div class="rank-row"><div class="rank-pos">#${i+1}</div><div class="rank-name">${(games.find(g=>g.id===r[0])||{name:r[0]}).name}</div><div class="rank-score">${r[1]} pts</div></div>`).join(''):'<p class="panel-note">Jogue para criar seus primeiros recordes.</p>';openPanel('#rankingPanel')};
+document.querySelectorAll('[data-close-panel]').forEach(b=>b.onclick=()=>b.closest('.feature-panel').classList.add('hidden'));
+const originalLaunch=launch;
+launch=function(id){addRecent(id);originalLaunch(id);setTimeout(()=>observeScore(id),80)};
+function observeScore(id){
+ const el=document.querySelector('#score');if(!el)return;
+ const collect=()=>{const m=el.textContent.match(/Pontos:\s*(\d+)/i);if(m){const n=+m[1];state.records[id]=Math.max(state.records[id]||0,n);saveState()}};
+ collect();new MutationObserver(collect).observe(el,{childList:true,subtree:true,characterData:true});
+}
+updateDashboard();
