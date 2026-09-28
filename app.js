@@ -417,7 +417,7 @@ function premiumFinish(id,phase,score,win=true){
  saveProgress(id,Math.min(100,phase+1));addRPGReward(id,phase,stars);
  document.querySelector('#premiumInfo').innerHTML='🏆 Fase concluída • '+('⭐'.repeat(stars))+' • '+score+' pontos • Próxima fase '+Math.min(100,phase+1);
  gameSound('win');
- const b=document.createElement('button');b.className='primary';b.textContent=phase>=100?'🏆 CAMPANHA COMPLETA':'PRÓXIMA FASE ▶';b.onclick=()=>campaignGame(id);document.querySelector('#premiumActions').appendChild(b);
+ const b=document.createElement('button');b.className='primary';b.textContent=phase>=100?'🏆 CAMPANHA COMPLETA':'PRÓXIMA FASE ▶';b.onclick=()=>launch(id);document.querySelector('#premiumActions').appendChild(b);
 }
 function premiumGameCore(g,phase){
  const id=g.id;
