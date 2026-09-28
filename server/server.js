@@ -8,7 +8,9 @@ const path=require('path');
 const app=express();
 const PORT=process.env.PORT||3000;
 const JWT_SECRET=process.env.JWT_SECRET||'dev-only-change-me';
-const db=new Database(path.join(__dirname,'games.db'));
+const dbPath=process.env.DB_PATH||path.join(__dirname,'data','games.db');
+require('fs').mkdirSync(path.dirname(dbPath),{recursive:true});
+const db=new Database(dbPath);
 db.pragma('journal_mode = WAL');
 db.exec(`
 CREATE TABLE IF NOT EXISTS users(
