@@ -201,25 +201,21 @@ function campaignTheme(g){
 function campaignGame(id){
   const g=games.find(x=>x.id===id)||games[0], level=getProgress(id), [emoji,kind]=campaignTheme(g);
   area.innerHTML=`<div class="game-wrap campaign-wrap">
-    <div class="campaign-head">
-      <div><span class="eyebrow">CAMPANHA</span><h3>${emoji} ${g.name}</h3><p>${kind} • 100 fases</p></div>
-      <div class="campaign-level">FASE <b id="campaignLevel">${level}</b>/100</div>
-    </div>
+    <div class="campaign-head"><div><span class="eyebrow">CAMPANHA • MUNDO ${worldForPhase(level)}</span><h3>${emoji} ${g.name}</h3><p>${kind} • 100 fases</p></div><div class="campaign-level">FASE <b id="campaignLevel">${level}</b>/100</div></div>
+    <div id="rpgHud" class="rpg-hud"></div>
     <div class="campaign-progress"><span id="campaignBar" style="width:${level}%"></span></div>
-    <div class="campaign-body">
-      <div class="campaign-icon">${g.icon}</div>
+    <div class="campaign-body"><div class="campaign-icon">${g.icon}</div>
       <h3 id="campaignTitle">Fase ${level} — ${campaignMission(id,level)}</h3>
-      <p id="campaignDesc">Complete o desafio para liberar a próxima fase. A dificuldade aumenta a cada etapa.</p>
+      <p>Complete a missão para ganhar ⭐, 🪙 e XP. A cada 10 fases você desbloqueia um novo mundo.</p>
       <div id="campaignChallenge"></div>
-      <div class="campaign-actions">
-        <button class="primary" id="campaignCheck">CONCLUIR FASE</button>
-        <button class="primary" id="campaignNext" disabled>PRÓXIMA FASE ▶</button>
-      </div>
-      <div id="campaignScore" class="score">Progresso: ${level-1}/100 fases concluídas</div>
+      <div class="campaign-actions"><button class="primary" id="campaignCheck">CONCLUIR FASE</button><button class="primary" id="campaignNext" disabled>PRÓXIMA FASE ▶</button></div>
+      <div id="campaignScore" class="score">Progresso: ${level-1}/100 • Mundo ${worldForPhase(level)}</div>
     </div>
   </div>`;
-  buildCampaignChallenge(id,level);
+  addRPGHudFallback(); buildCampaignChallenge(id,level);
 }
+function addRPGHudFallback(){updateRPGHud()}
+
 function campaignMission(id,l){
   const g=games.find(x=>x.id===id);
   if(g?.cat==='cooking')return 'prepare os ingredientes certos';
@@ -259,22 +255,63 @@ function buildCampaignChallenge(id,l){
   document.querySelector('#campaignCheck').onclick=()=>completeCampaignPhase(id,l);
 }
 function completeCampaignPhase(id,l){
-  const g=games.find(x=>x.id===id)||games[0], box=document.querySelector('#campaignChallenge');
-  let ok=true;
+  const g=games.find(x=>x.id===id)||games[0], box=document.querySelector('#campaignChallenge'); let ok=true;
   if(g.cat==='puzzle')ok=Number(box.querySelector('#missionAnswer')?.value)===Number(box.dataset.answer);
   else if(g.cat==='cooking')ok=box.querySelectorAll('.selected').length===3;
   else if(g.cat==='coloring'||g.cat==='girls')ok=(Number(box.querySelector('#choiceCount')?.textContent)||0)>=Math.min(10,3+Math.floor(l/10));
-  else if(g.cat==='racing')ok=true;
   else if(g.cat==='flight'||g.cat==='sim')ok=Number(box.querySelector('#missionControl')?.value)>=30&&Number(box.querySelector('#missionControl')?.value)<=80;
+  else if(g.cat==='racing')ok=true;
   else ok=(Number(box.querySelector('#tapCount')?.textContent?.split('/')[0])||0)>=Number(box.dataset.target||1);
-  if(!ok){document.querySelector('#campaignScore').textContent='❌ Ainda não. Complete o objetivo da fase e tente novamente.';return}
-  const next=Math.min(100,l+1);saveProgress(id,next);
-  document.querySelector('#campaignScore').textContent=l===100?'🏆 CAMPANHA COMPLETA! Você terminou as 100 fases.':'✅ Fase '+l+' concluída! Fase '+next+' liberada.';
-  document.querySelector('#campaignCheck').disabled=true;
-  const nb=document.querySelector('#campaignNext');nb.disabled=false;
-  nb.onclick=()=>campaignGame(id);
-  document.querySelector('#campaignBar').style.width=l+'%';
+  if(!ok){if(!loseLife())document.querySelector('#campaignScore').textContent='💔 Sem vidas! Aguarde ou conclua outras missões para recuperar.';else document.querySelector('#campaignScore').textContent='❌ Missão falhou. Você perdeu 1 vida.';return}
+  const stars=phaseStars(id,l,true),next=Math.min(100,l+1);saveProgress(id,next);addRPGReward(id,l,stars);
+  document.querySelector('#campaignScore').textContent=l===100?'🏆 CAMPANHA COMPLETA! 100 fases concluídas!':'✅ Fase '+l+' concluída! '+('⭐'.repeat(stars))+' • +'+(stars*10)+' moedas • +'+(stars*25)+' XP • Mundo '+worldForPhase(l);
+  document.querySelector('#campaignCheck').disabled=true;const nb=document.querySelector('#campaignNext');nb.disabled=false;nb.onclick=()=>campaignGame(id);document.querySelector('#campaignBar').style.width=l+'%';updateRPGHud();
 }
+
 
 (function injectCampaignStyle(){if(document.querySelector('#campaignStyle'))return;const s=document.createElement('style');s.id='campaignStyle';s.textContent=`
 .campaign-wrap{max-width:900px;margin:auto}.campaign-head{display:flex;justify-content:space-between;gap:20px;align-items:center}.campaign-level{font-size:20px;padding:12px 16px;border:1px solid #33405a;border-radius:12px}.campaign-progress{height:12px;background:#182338;border-radius:20px;overflow:hidden;margin:14px 0 24px}.campaign-progress span{display:block;height:100%;background:#18d6a0;transition:width .3s}.campaign-body{text-align:center;padding:18px}.campaign-icon{font-size:90px}.campaign-options{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:18px}.campaign-options button{font-size:34px;padding:10px 15px;background:#151f31;color:white;border:1px solid #33405a;border-radius:12px;cursor:pointer}.campaign-options button.selected{outline:3px solid #18d6a0;transform:scale(1.06)}.campaign-actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:22px}.campaign-actions button:disabled{opacity:.45;cursor:not-allowed}`;document.head.appendChild(s)})();
+
+// ===== SISTEMA DE PROGRESSAO RPG =====
+const RPG_KEY='games_rpg_progress_v1';
+const rpg=JSON.parse(localStorage.getItem(RPG_KEY)||'{}');
+rpg.lives=Number.isFinite(rpg.lives)?rpg.lives:5;
+rpg.coins=Number.isFinite(rpg.coins)?rpg.coins:0;
+rpg.xp=Number.isFinite(rpg.xp)?rpg.xp:0;
+rpg.level=Number.isFinite(rpg.level)?rpg.level:1;
+rpg.stars=rpg.stars||{};
+rpg.worlds=rpg.worlds||{};
+rpg.phaseScores=rpg.phaseScores||{};
+function saveRPG(){localStorage.setItem(RPG_KEY,JSON.stringify(rpg));updateRPGHud()}
+function xpForLevel(l){return 100+(l-1)*50}
+function recalcLevel(){while(rpg.xp>=xpForLevel(rpg.level)){rpg.xp-=xpForLevel(rpg.level);rpg.level++}}
+function addRPGReward(id,phase,stars){
+  const key=id+':'+phase, old=rpg.stars[key]||0;
+  if(stars>old)rpg.stars[key]=stars;
+  rpg.coins+=stars*10;
+  rpg.xp+=stars*25;
+  recalcLevel(); saveRPG();
+  if(apiToken)api('/api/scores',{method:'POST',body:JSON.stringify({gameId:id+'-phase-'+phase,score:stars*100+phase})}).catch(()=>{});
+}
+function loseLife(){if(rpg.lives<=0)return false;rpg.lives--;saveRPG();return true}
+function restoreLife(){rpg.lives=Math.min(5,rpg.lives+1);saveRPG()}
+function updateRPGHud(){
+  const el=document.querySelector('#rpgHud');if(!el)return;
+  const need=xpForLevel(rpg.level);
+  el.innerHTML='❤️ '.repeat(rpg.lives)+'🤍 '.repeat(5-rpg.lives)+' &nbsp; 🪙 '+rpg.coins+' &nbsp; ⭐ '+Object.values(rpg.stars).reduce((a,b)=>a+b,0)+' &nbsp; ⚡ Nível '+rpg.level+' &nbsp; XP '+rpg.xp+'/'+need;
+}
+function worldForPhase(p){return Math.min(10,Math.floor((p-1)/10)+1)}
+function phaseStars(id,p,success){
+  if(!success)return 0;
+  const world=worldForPhase(p), difficulty=p%10;
+  return difficulty<=3?3:difficulty<=7?2:1;
+}
+function addRPGPanel(){
+  if(document.querySelector('#rpgHud'))return;
+  const hud=document.createElement('div');hud.id='rpgHud';hud.className='rpg-hud';
+  const target=document.querySelector('.game-wrap');if(target)target.prepend(hud);updateRPGHud();
+}
+
+(function injectRPGStyle(){if(document.querySelector('#rpgStyle'))return;const s=document.createElement('style');s.id='rpgStyle';s.textContent=`
+.rpg-hud{margin:10px 0;padding:12px 16px;background:#101a2b;border:1px solid #33405a;border-radius:12px;text-align:center;font-weight:700;line-height:1.8}.campaign-head{position:relative}.campaign-level{white-space:nowrap}.campaign-body{min-height:320px}.campaign-actions{gap:12px}.campaign-progress span{background:linear-gradient(90deg,#18d6a0,#6d5dfc)}`;
+document.head.appendChild(s)})();
