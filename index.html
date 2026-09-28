@@ -11,6 +11,7 @@
 <header class="topbar">
   <div class="brand"><span class="logo">🎮</span><div><strong>GAMES</strong><small>ONLINE ARCADE</small></div></div>
   <nav>
+    <button id="navProfile" class="profile-btn">👤 Entrar</button>
     <button data-filter="all" class="navbtn active">Início</button>
     <button data-filter="arcade" class="navbtn">Arcade</button>
     <button data-filter="classic" class="navbtn">Clássicos</button>
@@ -19,6 +20,15 @@
     <button data-filter="sim" class="navbtn">Simuladores</button>
   </nav>
 </header>
+<div id="accountBar" class="account-bar hidden"></div>
+<section class="dashboard section">
+  <div class="dash-card"><span class="dash-icon">🏆</span><div><small>MEU RECORDE</small><strong id="bestScore">0</strong></div></div>
+  <div class="dash-card"><span class="dash-icon">🎮</span><div><small>JOGADOS</small><strong id="playedCount">0</strong></div></div>
+  <div class="dash-card"><span class="dash-icon">⭐</span><div><small>FAVORITOS</small><strong id="favCount">0</strong></div></div>
+  <button class="dash-action" id="showRecent">🕘 Recentes</button>
+  <button class="dash-action" id="showFavorites">❤️ Favoritos</button>
+  <button class="dash-action" id="showRanking">🏆 Ranking</button>
+</section>
 
 <main>
   <section class="hero">
@@ -33,8 +43,10 @@
 
   <section class="section">
     <div class="section-head"><div><span class="eyebrow">CATÁLOGO</span><h2>Jogos</h2></div><input id="search" placeholder="🔎 Procurar jogo..."></div>
-    <div id="grid" class="grid"></div>
+    <div id="viewTitle" class="view-title hidden"></div><div id="grid" class="grid"></div>
   </section>
+<section id="rankingPanel" class="section feature-panel hidden"><div class="section-head"><div><span class="eyebrow">PLACAR LOCAL</span><h2>Ranking</h2></div><button class="close-panel" data-close-panel>Fechar</button></div><div id="rankingList"></div><p class="panel-note">O ranking atual é salvo neste navegador. Um ranking global precisa de banco de dados e login no servidor.</p></section>
+<section id="loginPanel" class="section feature-panel hidden"><div class="section-head"><div><span class="eyebrow">PERFIL</span><h2>Login</h2></div><button class="close-panel" data-close-panel>Fechar</button></div><div class="login-box"><p>Crie seu perfil local para guardar favoritos, jogos recentes e recordes neste dispositivo.</p><input id="loginName" maxlength="24" placeholder="Seu nome ou apelido"><button class="primary" id="loginBtn">Entrar no Games</button></div></section>
 </main>
 
 <div id="modal" class="modal hidden">
