@@ -335,6 +335,77 @@ function addRPGPanel(){
 .rpg-hud{margin:10px 0;padding:12px 16px;background:#101a2b;border:1px solid #33405a;border-radius:12px;text-align:center;font-weight:700;line-height:1.8}.campaign-head{position:relative}.campaign-level{white-space:nowrap}.campaign-body{min-height:320px}.campaign-actions{gap:12px}.campaign-progress span{background:linear-gradient(90deg,#18d6a0,#6d5dfc)}`;
 document.head.appendChild(s)})();
 
+
+// ===== CHEFES E EVENTOS ESPECIAIS =====
+const WORLD_EVENTS=[
+ {world:1,name:'Festival da Floresta',icon:'🌳',desc:'Plataformas mais rápidas e moedas bônus.',bonus:'🪙 Moedas em dobro'},
+ {world:2,name:'Noite Neon',icon:'🌃',desc:'Trânsito acelerado e ritmo extra.',bonus:'⚡ Velocidade +20%'},
+ {world:3,name:'Tempestade do Deserto',icon:'🏜️',desc:'A margem de erro fica menor.',bonus:'⭐ Estrela protegida'},
+ {world:4,name:'Festival de Gelo',icon:'❄️',desc:'Controles mais escorregadios.',bonus:'❤️ Vida bônus'},
+ {world:5,name:'Operação Orbital',icon:'🚀',desc:'Ondas maiores de inimigos.',bonus:'💥 Dano bônus'},
+ {world:6,name:'Vulcão em Fúria',icon:'🌋',desc:'Modo extremo com decisões rápidas.',bonus:'🔥 XP em dobro'},
+ {world:7,name:'Ilha Tropical',icon:'🏝️',desc:'Evento de coleta com moedas extras.',bonus:'🪙 +100 moedas'},
+ {world:8,name:'Castelo Sombrio',icon:'🏰',desc:'Desafio mais preciso e chefe especial.',bonus:'👑 Recompensa épica'},
+ {world:9,name:'Galáxia Perdida',icon:'🌌',desc:'Eventos surpresa durante a missão.',bonus:'🌟 Multiplicador de estrelas'},
+ {world:10,name:'Coroação Final',icon:'👑',desc:'Todos os mundos se unem na batalha final.',bonus:'🏆 Recompensa lendária'}
+];
+const BOSS_EVENTS={
+ 10:{name:'Guardião da Floresta',icon:'🌳👹',type:'survival',desc:'Sobreviva às ondas de obstáculos e atravesse o portal.'},
+ 20:{name:'Rei Neon',icon:'👑🌃',type:'race',desc:'Corra contra o chefe e mantenha sua faixa.'},
+ 30:{name:'Titã do Deserto',icon:'🏜️👹',type:'precision',desc:'Acerte a zona segura enquanto o Titã se move.'},
+ 40:{name:'Rainha de Gelo',icon:'❄️👑',type:'race',desc:'Supere o circuito congelado antes do tempo acabar.'},
+ 50:{name:'Comandante Orbital',icon:'🚀👾',type:'space',desc:'Derrote a formação orbital antes que ela escape.'},
+ 60:{name:'Lorde do Vulcão',icon:'🌋🔥',type:'survival',desc:'Resista ao modo extremo e chegue ao portal.'},
+ 70:{name:'Capitão da Ilha',icon:'🏝️🏴‍☠️',type:'collect',desc:'Colete moedas durante a contagem regressiva.'},
+ 80:{name:'Rei do Castelo',icon:'🏰👑',type:'precision',desc:'Acerte a janela certa para derrotar o chefe.'},
+ 90:{name:'Devorador de Estrelas',icon:'🌌🐉',type:'space',desc:'Destrua a última onda espacial.'},
+ 100:{name:'CHEFE FINAL',icon:'👑🐉',type:'final',desc:'A batalha final reúne mecânicas de todos os mundos.'}
+};
+function worldEventForPhase(phase){return WORLD_EVENTS[Math.min(9,Math.floor((phase-1)/10))]}
+function showSpecialIntro(phase){
+ const ev=worldEventForPhase(phase),boss=BOSS_EVENTS[phase]; if(!ev)return;
+ document.querySelector('#premiumInfo').innerHTML='<b>'+(boss?'👹 BATALHA DE CHEFE':'🎉 EVENTO DO MUNDO')+'</b> • '+(boss?boss.desc:ev.desc)+' • <strong>'+ev.bonus+'</strong>';
+}
+function launchBossOrPremium(g,p){return BOSS_EVENTS[p]?premiumBoss(g,p,BOSS_EVENTS[p]):premiumGameCore(g,p)}
+function premiumBoss(g,p,boss){
+ const[c,s,info]=premiumCanvas(g.name,'👹 '+boss.name+' • Fase '+p),x=c.getContext('2d');
+ let k={},done=false,score=0,time=0,player=390,shots=[],enemies=[];
+ const key=e=>{k[e.key.toLowerCase()]=1;if(e.key===' ')e.preventDefault()},up=e=>k[e.key.toLowerCase()]=0;
+ addEventListener('keydown',key);addEventListener('keyup',up);
+ if(boss.type==='space'||boss.type==='final')for(let i=0;i<7+(p===100?3:0);i++)enemies.push({x:80+(i%5)*150,y:70+Math.floor(i/5)*65,hp:p>=50?2:1});
+ function loop(){
+  if(done)return;time++;x.fillStyle=boss.type==='final'?'#120719':'#071226';x.fillRect(0,0,820,460);
+  if(boss.type==='race'){
+   x.fillStyle='#30343b';x.fillRect(150,0,520,460);x.fillStyle='#fff';for(let y=-40+(time*6%80);y<460;y+=80)x.fillRect(405,y,8,40);
+   if(k.a||k.arrowleft)player=Math.max(175,player-6);if(k.d||k.arrowright)player=Math.min(645,player+6);
+   const bx=410+Math.sin(time/18)*220;x.fillStyle='#e85d5d';x.fillRect(bx-22,80,44,65);x.fillStyle='#20d6a0';x.fillRect(player-25,365,50,80);
+   score=Math.min(1000,Math.floor(time*4));if(Math.abs(player-bx)<48&&time>45){done=true;premiumFinish(g.id,p,900,true);return}
+   if(time>420){done=true;info.textContent='💥 O chefe escapou. Tente novamente.';gameSound('fail');return}
+  }else if(boss.type==='precision'){
+   x.fillStyle='#26374d';x.fillRect(0,0,820,460);const tx=410+Math.sin(time/14)*300,ty=220+Math.cos(time/19)*120;
+   x.fillStyle='#ffd166';x.beginPath();x.arc(tx,ty,45,0,7);x.fill();x.fillStyle='#20d6a0';x.fillRect(player-18,385,36,45);
+   if(k.a||k.arrowleft)player-=5;if(k.d||k.arrowright)player+=5;player=Math.max(20,Math.min(800,player));
+   if((k[' ']||k.w)&&Math.abs(player-tx)<55&&time>30){done=true;premiumFinish(g.id,p,1000,true);return}
+   if(time>600){done=true;info.textContent='⏱️ O chefe venceu desta vez.';gameSound('fail');return}
+  }else if(boss.type==='collect'){
+   x.fillStyle='#16704a';x.fillRect(0,0,820,460);x.fillStyle='#ffd166';
+   for(let i=0;i<12;i++){const cx=(i*137+time*2)%780+20,cy=80+(i*67)%300;x.beginPath();x.arc(cx,cy,10,0,7);x.fill()}
+   if(k.a||k.arrowleft)player-=6;if(k.d||k.arrowright)player+=6;player=Math.max(20,Math.min(800,player));if(time%12===0)score+=40;
+   if(time>420){done=true;premiumFinish(g.id,p,Math.min(1000,score+650),true);return}
+  }else{
+   if(k.a||k.arrowleft)player-=6;if(k.d||k.arrowright)player+=6;player=Math.max(25,Math.min(795,player));
+   if(k[' ']&&shots.length<10)shots.push({x:player,y:390});shots.forEach(q=>q.y-=10);shots=shots.filter(q=>q.y>0);
+   enemies.forEach(e=>shots.forEach(q=>{if(Math.abs(q.x-e.x)<35&&Math.abs(q.y-e.y)<30){e.hp--;q.y=-99;if(e.hp<=0){e.dead=true;score+=130}}}));
+   enemies=enemies.filter(e=>!e.dead);enemies.forEach(e=>e.x+=Math.sin(time/20+e.y)*.8);
+   x.fillStyle='#ff5266';enemies.forEach(e=>x.fillRect(e.x-24,e.y-18,48,36));x.fillStyle='#22d3ee';x.beginPath();x.moveTo(player,365);x.lineTo(player-22,415);x.lineTo(player+22,415);x.fill();x.fillStyle='#ffd166';shots.forEach(q=>x.fillRect(q.x-2,q.y,4,12));
+   if(!enemies.length){done=true;premiumFinish(g.id,p,Math.min(1000,score+250),true);return}
+   if(time>900){done=true;info.textContent='👾 A formação resistiu. Tente novamente.';gameSound('fail');return}
+  }
+  s.textContent=Math.min(1000,score)+' pts';info.textContent='👹 '+boss.name+' • '+(boss.type==='space'||boss.type==='final'?'Espaço atira • ':'')+'tempo '+Math.floor(time/10)+'s';requestAnimationFrame(loop);
+ }
+ info.textContent='👹 '+boss.name+' • Prepare-se!';setTimeout(loop,500);
+}
+
 // ===== JOGOS PREMIUM: GAMEPLAY PRÓPRIO =====
 const PREMIUM_GAMES=new Set(['superplumber','kartrush','citydriver','spacebattle','masterchef','flightacademy','speedrace']);
 const premiumLaunch=launch;
@@ -348,14 +419,20 @@ function premiumFinish(id,phase,score,win=true){
  gameSound('win');
  const b=document.createElement('button');b.className='primary';b.textContent=phase>=100?'🏆 CAMPANHA COMPLETA':'PRÓXIMA FASE ▶';b.onclick=()=>campaignGame(id);document.querySelector('#premiumActions').appendChild(b);
 }
-function premiumGame(id){
- const g=games.find(x=>x.id===id),phase=getProgress(id);
+function premiumGameCore(g,phase){
+ const id=g.id;
  if(id==='superplumber')return premiumPlumber(g,phase);
  if(id==='kartrush'||id==='speedrace')return premiumRace(g,phase);
  if(id==='citydriver')return premiumCity(g,phase);
  if(id==='spacebattle')return premiumSpace(g,phase);
  if(id==='masterchef')return premiumChef(g,phase);
  if(id==='flightacademy')return premiumFlight(g,phase);
+}
+function premiumGame(id){
+ const g=games.find(x=>x.id===id),phase=getProgress(id);
+ if(BOSS_EVENTS[phase])return launchBossOrPremium(g,phase);
+ showSpecialIntro(phase);
+ return premiumGameCore(g,phase);
 }
 function premiumPlumber(g,p){
  const[c,s,info]=premiumCanvas(g.name,'Aventura de plataforma • Fase '+p);const x=c.getContext('2d');let px=70,py=360,vx=0,vy=0,coins=0,score=0,k={},done=false;
