@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS scores(
  score INTEGER NOT NULL DEFAULT 0,
  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_scores_game_score ON scores(game_id,score DESC);
+CREATE INDEX IF NOT EXISTS idx_scores_game_score ON scores(game_id,score DESC);\nCREATE TABLE IF NOT EXISTS player_progress(\n user_id INTEGER PRIMARY KEY,\n lives INTEGER NOT NULL DEFAULT 5,\n coins INTEGER NOT NULL DEFAULT 0,\n xp INTEGER NOT NULL DEFAULT 0,\n level INTEGER NOT NULL DEFAULT 1,\n updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\nCREATE TABLE IF NOT EXISTS phase_progress(\n user_id INTEGER NOT NULL,\n game_id TEXT NOT NULL,\n phase INTEGER NOT NULL,\n stars INTEGER NOT NULL DEFAULT 0,\n score INTEGER NOT NULL DEFAULT 0,\n updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,\n PRIMARY KEY(user_id,game_id,phase)\n);
 `);
 
 const adminEmail=process.env.ADMIN_EMAIL;
@@ -80,6 +80,21 @@ app.post('/api/login',(req,res)=>{
  res.json({user:{id:u.id,name:u.name,email:u.email,role:u.role},token:token(u)});
 });
 
+app.get('/api/progress',auth,(req,res)=>{
+ const p=db.prepare('SELECT lives,coins,xp,level FROM player_progress WHERE user_id=?').get(req.user.id)||{lives:5,coins:0,xp:0,level:1};
+ const phases=db.prepare('SELECT game_id,phase,stars,score FROM phase_progress WHERE user_id=?').all(req.user.id);
+ res.json({player:p,phases});
+});
+app.post('/api/progress',auth,(req,res)=>{
+ const p=req.body.player||{};const lives=Math.max(0,Math.min(5,Math.floor(Number(p.lives)||0))),coins=Math.max(0,Math.min(100000000,Math.floor(Number(p.coins)||0))),xp=Math.max(0,Math.min(100000000,Math.floor(Number(p.xp)||0))),level=Math.max(1,Math.min(10000,Math.floor(Number(p.level)||1)));
+ db.prepare('INSERT INTO player_progress(user_id,lives,coins,xp,level,updated_at) VALUES(?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(user_id) DO UPDATE SET lives=excluded.lives,coins=excluded.coins,xp=excluded.xp,level=excluded.level,updated_at=CURRENT_TIMESTAMP').run(req.user.id,lives,coins,xp,level);
+ const phase=req.body.phase;
+ if(phase&&phase.gameId){
+  const gameId=String(phase.gameId).slice(0,80),ph=Math.max(1,Math.min(1000,Math.floor(Number(phase.phase)||1))),stars=Math.max(0,Math.min(3,Math.floor(Number(phase.stars)||0))),score=Math.max(0,Math.min(100000000,Math.floor(Number(phase.score)||0)));
+  db.prepare('INSERT INTO phase_progress(user_id,game_id,phase,stars,score,updated_at) VALUES(?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(user_id,game_id,phase) DO UPDATE SET stars=MAX(stars,excluded.stars),score=MAX(score,excluded.score),updated_at=CURRENT_TIMESTAMP').run(req.user.id,gameId,ph,stars,score);
+ }
+ res.json({ok:true});
+});
 app.get('/api/me',auth,(req,res)=>{
  const u=db.prepare('SELECT id,name,email,role,created_at FROM users WHERE id=?').get(req.user.id);
  if(!u)return res.status(404).json({error:'Usuário não encontrado'});
