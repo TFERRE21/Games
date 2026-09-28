@@ -159,7 +159,7 @@ document.querySelector('#loginBtn')?.addEventListener('click',async()=>{
   const data=await api(authMode==='register'?'/api/register':'/api/login',{method:'POST',body:JSON.stringify(authMode==='register'?{name,email,password}:{email,password})});
   setApiSession(data);document.querySelector('#loginPanel').classList.add('hidden');btn.disabled=false;
   if(apiUser.role==='admin')showAdmin();
-  syncRPG();
+  syncRPG();syncPortal();
  }catch(e){btn.disabled=false;setAuthMode(authMode);authMessage(e.message)}
 });
 async function syncFavoritesFromApi(){
@@ -479,13 +479,13 @@ const originalLaunchPremium=launch;
 launch=function(id){if(PREMIUM_GAMES.has(id)){const g=games.find(x=>x.id===id)||games[0];document.querySelector('#gameCategory').textContent=g.cat.toUpperCase();document.querySelector('#gameTitle').textContent=g.name;modal.classList.remove('hidden');premiumGame(id);return}originalLaunchPremium(id)};
 \n// ===== PORTAL COMPLETO: PERFIL, LOJA, MISSOES, CONQUISTAS E SALAS =====
 const PORTAL_KEY='games_portal_v2';
-const portal=JSON.parse(localStorage.getItem(PORTAL_KEY)||'{}');
+const portal=JSON.parse(localStorage.getItem(PORTAL_KEY)||'{}');\nlet portalSyncBusy=false;
 portal.nickname=portal.nickname||'Jogador';
 portal.purchases=portal.purchases||[];
 portal.achievements=portal.achievements||[];
 portal.daily=portal.daily||{date:'',claimed:false};
 portal.missions=portal.missions||{};
-function savePortal(){localStorage.setItem(PORTAL_KEY,JSON.stringify(portal))}
+async function syncPortal(){\n if(!apiToken||portalSyncBusy)return;\n portalSyncBusy=true;\n try{const d=await api('/api/portal');const remote=d.portal||{};const hasRemote=(remote.purchases||[]).length||(remote.achievements||[]).length||remote.nickname&&remote.nickname!=='Jogador'||remote.daily&&remote.daily.date||remote.missions&&Object.keys(remote.missions).length;\n  if(!hasRemote&&((portal.purchases||[]).length||(portal.achievements||[]).length||portal.nickname!=='Jogador'||Object.keys(portal.missions||{}).length)){await persistPortal();return}\n  portal.nickname=remote.nickname||portal.nickname||'Jogador';portal.purchases=[...new Set([...(portal.purchases||[]),...(remote.purchases||[])])];portal.achievements=[...new Set([...(portal.achievements||[]),...(remote.achievements||[])])];portal.daily=remote.daily&&remote.daily.date?remote.daily:portal.daily;portal.missions=remote.missions&&Object.keys(remote.missions).length?remote.missions:portal.missions;savePortal();\n }catch(e){}finally{portalSyncBusy=false}\n}\nasync function persistPortal(){if(!apiToken)return;try{await api('/api/portal',{method:'POST',body:JSON.stringify({portal})})}catch(e){}}\nfunction savePortal(){localStorage.setItem(PORTAL_KEY,JSON.stringify(portal));if(apiToken&&!portalSyncBusy)persistPortal()}
 function totalStars(){return Object.values(rpg.stars||{}).reduce((a,b)=>a+b,0)}
 function totalPhases(){return Object.keys(rpg.stars||{}).filter(k=>(rpg.stars[k]||0)>0).length}
 const ACH=[
@@ -513,7 +513,7 @@ function renderProgress(){
 function claimDaily(){
  const today=new Date().toISOString().slice(0,10);
  if(portal.daily.date===today){document.querySelector('#dailyBonus').innerHTML='<div class="bonus-box">🎁 Bônus de hoje já coletado. Volte amanhã!</div>';return}
- portal.daily={date:today,claimed:true};rpg.coins+=100;rpg.xp+=50;recalcLevel();saveRPG();savePortal();
+ portal.daily={date:today,claimed:true};rpg.coins+=100;rpg.xp+=50;recalcLevel();saveRPG();savePortal();persistPortal();
  document.querySelector('#dailyBonus').innerHTML='<div class="bonus-box">🎉 +100 🪙 e +50 XP recebidos!</div>';
 }
 function renderMissions(){
@@ -531,18 +531,18 @@ const SHOP=[
 function renderShop(){
  const el=document.querySelector('#shopGrid');if(!el)return;
  el.innerHTML=SHOP.map(x=>{const owned=portal.purchases.includes(x[0]);return '<div class="shop-item"><div class="shop-art">'+x[1]+'</div><b>'+x[2]+'</b><small>'+x[3]+' 🪙</small><button class="primary" data-buy="'+x[0]+'" '+(owned?'disabled':'')+'>'+(owned?'ADQUIRIDO':'COMPRAR')+'</button></div>'}).join('');
- el.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{const x=SHOP.find(y=>y[0]===b.dataset.buy);if(!x||portal.purchases.includes(x[0]))return;if(rpg.coins<x[3]){alert('Moedas insuficientes.');return}rpg.coins-=x[3];portal.purchases.push(x[0]);saveRPG();savePortal();renderShop();renderProfile()});
+ el.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{const x=SHOP.find(y=>y[0]===b.dataset.buy);if(!x||portal.purchases.includes(x[0]))return;if(rpg.coins<x[3]){alert('Moedas insuficientes.');return}rpg.coins-=x[3];portal.purchases.push(x[0]);saveRPG();savePortal();persistPortal();persistRPGState();renderShop();renderProfile()});
 }
 function renderProfile(){
  const el=document.querySelector('#profileCard');if(!el)return;
  const need=xpForLevel(rpg.level), name=portal.nickname||state.user||'Jogador';
  el.innerHTML='<div class="profile-avatar">'+(portal.purchases.includes('crown')?'👑':'🎮')+'</div><div><h2>'+name+'</h2><p>Nível '+rpg.level+' • '+rpg.xp+'/'+need+' XP</p><div class="profile-stats"><span>❤️ '+rpg.lives+'</span><span>🪙 '+rpg.coins+'</span><span>⭐ '+totalStars()+'</span><span>🎯 '+totalPhases()+' fases</span></div><input id="nicknameInput" value="'+name.replace(/"/g,'&quot;')+'" maxlength="30"><button class="primary" id="saveNick">Salvar nome</button></div>';
- el.querySelector('#saveNick').onclick=()=>{portal.nickname=el.querySelector('#nicknameInput').value.trim()||'Jogador';savePortal();renderProfile()};
+ el.querySelector('#saveNick').onclick=()=>{portal.nickname=el.querySelector('#nicknameInput').value.trim()||'Jogador';savePortal();persistPortal();renderProfile()};
  renderShop();
 }
 function updateMissionProgress(id,stars){
  const date=new Date().toISOString().slice(0,10),m=portal.missions[date]||{phases:0,games:0,stars:0,played:{}};
- m.phases++;m.stars+=stars;m.played=m.played||{};m.played[id]=1;m.games=Object.keys(m.played).length;portal.missions[date]=m;savePortal();
+ m.phases++;m.stars+=stars;m.played=m.played||{};m.played[id]=1;m.games=Object.keys(m.played).length;portal.missions[date]=m;savePortal();persistPortal();
 }
 const oldAddRPGReward=addRPGReward;
 addRPGReward=function(id,phase,stars){oldAddRPGReward(id,phase,stars);updateMissionProgress(id,stars);refreshAchievements()};
