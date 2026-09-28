@@ -21,7 +21,12 @@ const games=[
 {id:'parking',name:'Simulador de Estacionamento',cat:'sim',icon:'🅿️',desc:'Controle o carro e estacione.'},
 {id:'train',name:'Simulador de Trem',cat:'sim',icon:'🚆',desc:'Controle velocidade e freios.'},
 {id:'fishing',name:'Simulador de Pesca',cat:'sim',icon:'🎣',desc:'Lance a linha e pesque.'},
-{id:'space',name:'Simulador Espacial',cat:'sim',icon:'🚀',desc:'Controle combustível e altitude.'}
+{id:'space',name:'Simulador Espacial',cat:'sim',icon:'🚀',desc:'Controle combustível e altitude.'},
+{id:'superplumber',name:'Super Plumber',cat:'arcade',icon:'🍄',desc:'Plataforma original com moedas e obstáculos.'},
+{id:'kartrush',name:'Kart Rush',cat:'sports',icon:'🏁',desc:'Corrida arcade original com pista infinita.'},
+{id:'citydriver',name:'City Driver',cat:'arcade',icon:'🌆',desc:'Direção urbana original em uma cidade fictícia.'},
+{id:'spacebattle',name:'Space Battle',cat:'arcade',icon:'👾',desc:'Nave contra ondas de inimigos.'},
+{id:'goalkeeper',name:'Goal Keeper',cat:'sports',icon:'🥅',desc:'Defenda o gol e faça sua pontuação.'}
 ];
 const grid=document.querySelector('#grid'),modal=document.querySelector('#modal'),area=document.querySelector('#gameArea');
 function render(filter='all',q=''){grid.innerHTML=games.filter(g=>(filter==='all'||g.cat===filter)&&g.name.toLowerCase().includes(q.toLowerCase())).map(g=>`<article class="card" data-launch="${g.id}"><button class="fav-btn" onclick="toggleFavorite('${g.id}',event)">${state.favorites.includes(g.id)?'❤️':'🤍'}</button><div class="thumb">${g.icon}</div>`<h3>${g.name}</h3><p>${g.desc}</p><div class="tag">${g.cat.toUpperCase()} • JOGAR</div></article>`).join('');document.querySelectorAll('[data-launch]').forEach(b=>b.onclick=()=>launch(b.dataset.launch))}
@@ -29,7 +34,7 @@ document.querySelectorAll('.navbtn').forEach(b=>b.onclick=()=>{document.querySel
 document.querySelector('#search').oninput=e=>render(document.querySelector('.navbtn.active').dataset.filter,e.target.value);
 function closeGame(){modal.classList.add('hidden');area.innerHTML=''}
 document.querySelector('#close').onclick=closeGame;modal.onclick=e=>{if(e.target===modal)closeGame()};
-function launch(id){const g=games.find(x=>x.id===id);document.querySelector('#gameCategory').textContent=g.cat.toUpperCase();document.querySelector('#gameTitle').textContent=g.name;modal.classList.remove('hidden');({platformer,snake,blocks,racer,memory,clicker,pong,breakout,flappy,tictactoe,mines,math,whack,typing,car:simCar,flight:simFlight,bus,truck,farm,parking,train,fishing,space}[id]||clicker)()}
+function launch(id){const g=games.find(x=>x.id===id);document.querySelector('#gameCategory').textContent=g.cat.toUpperCase();document.querySelector('#gameTitle').textContent=g.name;modal.classList.remove('hidden');({platformer,snake,blocks,racer,memory,clicker,pong,breakout,flappy,tictactoe,mines,math,whack,typing,car:simCar,flight:simFlight,bus,truck,farm,parking,train,fishing,space,superplumber:platformer,kartrush:racer,citydriver:racer,spacebattle,goalkeeper}[id]||clicker)()}
 function canvasGame(h=420){area.innerHTML=`<div class="game-wrap"><canvas id="game" width="760" height="${h}"></canvas><div id="score" class="score"></div><div class="controls">Teclado: setas / espaço • Clique e toque também funcionam quando indicado.</div></div>`;return[document.querySelector('#game'),document.querySelector('#score')]}
 function platformer(){const[c,s]=canvasGame(400),x=c.getContext('2d');let p={x:70,y:300,vx:0,vy:0},obs=[],score=0,over=false,k={};for(let i=0;i<8;i++)obs.push({x:220+i*110,y:250+Math.random()*80,w:70,h:18});const kd=e=>k[e.key]=1,ku=e=>k[e.key]=0;addEventListener('keydown',kd);addEventListener('keyup',ku);function loop(){x.fillStyle='#101b30';x.fillRect(0,0,c.width,c.height);x.fillStyle='#18d6a0';x.fillRect(0,350,c.width,50);x.fillStyle='#6d5dfc';x.fillRect(p.x,p.y,28,36);if(k.ArrowLeft)p.vx=-4;if(k.ArrowRight)p.vx=4;if((k[' ']||k.ArrowUp)&&p.y>=314)p.vy=-10;p.vy+=.5;p.x+=p.vx;p.y+=p.vy;if(p.x<0)p.x=0;if(p.x>730)p.x=730;if(p.y>314){p.y=314;p.vy=0}obs.forEach(o=>{o.x-=2;if(o.x<-90){o.x=800;score++;o.y=250+Math.random()*80}x.fillStyle='#f59e0b';x.fillRect(o.x,o.y,o.w,o.h);if(p.x<o.x+o.w&&p.x+28>o.x&&p.y+36>o.y&&p.y<o.y+o.h)over=true});s.textContent=over?'💥 Fim de jogo':'Pontos: '+score;if(!over)requestAnimationFrame(loop)}loop()}
 function snake(){const[c,s]=canvasGame(420),x=c.getContext('2d'),N=21,sz=20;let a=[{x:10,y:10}],d={x:1,y:0},food={x:5,y:5},over=false,sc=0;const key=e=>{if(e.key==='ArrowUp'&&d.y===0)d={x:0,y:-1};if(e.key==='ArrowDown'&&d.y===0)d={x:0,y:1};if(e.key==='ArrowLeft'&&d.x===0)d={x:-1,y:0};if(e.key==='ArrowRight'&&d.x===0)d={x:1,y:0}};addEventListener('keydown',key);function loop(){let h={x:a[0].x+d.x,y:a[0].y+d.y};if(h.x<0||h.y<0||h.x>=N||h.y>=N||a.some(q=>q.x===h.x&&q.y===h.y))over=true;a.unshift(h);if(h.x===food.x&&h.y===food.y){sc++;food={x:Math.floor(Math.random()*N),y:Math.floor(Math.random()*N)}}else a.pop();x.fillStyle='#08101b';x.fillRect(0,0,c.width,c.height);x.fillStyle='#18d6a0';a.forEach(q=>x.fillRect(q.x*sz,q.y*sz,sz-2,sz-2));x.fillStyle='#ff4d6d';x.fillRect(food.x*sz,food.y*sz,sz-2,sz-2);s.textContent=over?'💥 Fim de jogo':'Pontos: '+sc;if(!over)setTimeout(()=>requestAnimationFrame(loop),105)}loop()}
@@ -89,3 +94,55 @@ function observeScore(id){
 }
 updateDashboard();
 render();
+
+
+// ===== API REAL: LOGIN, CADASTRO, RANKING GLOBAL E ADM =====
+const API=(window.GAMES_API_URL||'').replace(/\/$/,'');
+let apiToken=localStorage.getItem('games_api_token')||'';
+let apiUser=JSON.parse(localStorage.getItem('games_api_user')||'null');
+let authMode='login';
+async function api(path,options={}){const headers={'Content-Type':'application/json',...(options.headers||{})};if(apiToken)headers.Authorization='Bearer '+apiToken;const res=await fetch(API+path,{...options,headers});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||'Erro de comunicação');return data}
+function setApiSession(data){apiToken=data.token;apiUser=data.user;localStorage.setItem('games_api_token',apiToken);localStorage.setItem('games_api_user',JSON.stringify(apiUser));state.user=apiUser.name;saveState();document.querySelector('#authMsg').textContent='Login realizado com sucesso!'}
+function authMessage(t){const e=document.querySelector('#authMsg');if(e)e.textContent=t}
+function setAuthMode(mode){authMode=mode;document.querySelector('#tabLogin')?.classList.toggle('active',mode==='login');document.querySelector('#tabRegister')?.classList.toggle('active',mode==='register');document.querySelector('#loginName').style.display=mode==='register'?'block':'none';document.querySelector('#loginBtn').textContent=mode==='register'?'Criar conta':'Entrar no Games'}
+document.querySelector('#tabLogin')?.addEventListener('click',()=>setAuthMode('login'));
+document.querySelector('#tabRegister')?.addEventListener('click',()=>setAuthMode('register'));
+document.querySelector('#loginBtn')?.addEventListener('click',async()=>{
+ const name=document.querySelector('#loginName').value.trim(),email=document.querySelector('#loginEmail').value.trim(),password=document.querySelector('#loginPassword').value;
+ try{
+  const data=await api(authMode==='register'?'/api/register':'/api/login',{method:'POST',body:JSON.stringify(authMode==='register'?{name,email,password}:{email,password})});
+  setApiSession(data);document.querySelector('#loginPanel').classList.add('hidden');
+  if(apiUser.role==='admin')showAdmin();
+ }catch(e){authMessage(e.message)}
+});
+async function syncFavoritesFromApi(){
+ if(!apiToken)return;
+ try{const d=await api('/api/favorites');state.favorites=d.favorites;saveState()}catch(e){}
+}
+async function sendScore(id,n){
+ if(!apiToken||n<=0)return;
+ try{await api('/api/scores',{method:'POST',body:JSON.stringify({gameId:id,score:n})})}catch(e){}
+}
+const oldCollect=typeof observeScore==='function'?observeScore:null;
+observeScore=function(id){
+ const el=document.querySelector('#score');if(!el)return;
+ const collect=()=>{const m=el.textContent.match(/Pontos:\s*(\d+)/i);if(m){const n=+m[1];state.records[id]=Math.max(state.records[id]||0,n);saveState();sendScore(id,n)}};
+ collect();new MutationObserver(collect).observe(el,{childList:true,subtree:true,characterData:true});
+}
+async function loadGlobalRanking(){
+ try{const d=await api('/api/ranking');document.querySelector('#rankingList').innerHTML=d.ranking.length?d.ranking.map((r,i)=>`<div class="rank-row"><div class="rank-pos">#${i+1}</div><div class="rank-name">${r.name} — ${r.game_id}</div><div class="rank-score">${r.score} pts</div></div>`).join(''):'<p class="panel-note">Ainda não há recordes globais.</p>'}
+ catch(e){document.querySelector('#rankingList').innerHTML='<p class="panel-note">Faça login para consultar o ranking global.</p>'}
+}
+const rankBtn=document.querySelector('#showRanking');if(rankBtn)rankBtn.onclick=()=>{openPanel('#rankingPanel');loadGlobalRanking()};
+async function showAdmin(){
+ if(!apiUser||apiUser.role!=='admin')return;
+ openPanel('#adminPanel');
+ try{
+  const [s,u]=await Promise.all([api('/api/admin/stats'),api('/api/admin/users')]);
+  document.querySelector('#admUsers').textContent=s.users;document.querySelector('#admScores').textContent=s.scores;document.querySelector('#admFavorites').textContent=s.favorites;
+  document.querySelector('#adminUsers').innerHTML=u.users.map(x=>`<tr><td>${x.id}</td><td>${x.name}</td><td>${x.email}</td><td>${x.role}</td><td>${x.role==='admin'?'—':`<button class="admin-delete" onclick="deleteAdminUser(${x.id})">Excluir</button>`}</td></tr>`).join('');
+ }catch(e){document.querySelector('#adminUsers').innerHTML='<tr><td colspan="5">Sessão ADM inválida ou API indisponível.</td></tr>'}
+}
+async function deleteAdminUser(id){if(!confirm('Excluir este usuário e seus dados?'))return;try{await api('/api/admin/users/'+id,{method:'DELETE'});showAdmin()}catch(e){alert(e.message)}}
+const oldProfile=document.querySelector('#navProfile');if(oldProfile)oldProfile.onclick=()=>{if(apiUser){authMessage('Conta: '+apiUser.email+' • Perfil: '+apiUser.role);document.querySelector('#loginPanel').classList.remove('hidden');if(apiUser.role==='admin')showAdmin()}else openPanel('#loginPanel')};
+setAuthMode('login');syncFavoritesFromApi();
