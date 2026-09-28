@@ -521,10 +521,75 @@ function premiumGame(id){
   if(typeof showSpecialIntro==='function')showSpecialIntro(p);
 }
 function premiumPlumber(g,p){
- const[c,s,info]=premiumCanvas(g.name,'Aventura de plataforma • Fase '+p);const x=c.getContext('2d');let px=70,py=360,vx=0,vy=0,coins=0,score=0,k={},done=false;
- const world=()=>{x.fillStyle='#79c7ff';x.fillRect(0,0,820,460);x.fillStyle='#62b84b';x.fillRect(0,405,820,55);x.fillStyle='#8b5a2b';x.fillRect(0,425,820,35);for(let i=0;i<7;i++){let bx=120+i*105-(p*17%70),by=330-(i%3)*65;x.fillStyle='#8d6b45';x.fillRect(bx,by,75,16);x.fillStyle='#ffd84d';x.beginPath();x.arc(bx+38,by-18,9,0,7);x.fill()}x.fillStyle='#e64b4b';x.fillRect(px,py,30,40);x.fillStyle='#27364d';x.fillRect(px+6,py+28,18,12)};
- const key=e=>{k[e.key.toLowerCase()]=1;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault()},up=e=>k[e.key.toLowerCase()]=0;addEventListener('keydown',key);addEventListener('keyup',up);
- function loop(){if(done)return;world();if(k.a||k.arrowleft)vx=-4;if(k.d||k.arrowright)vx=4;if(!(k.a||k.d||k.arrowleft||k.arrowright))vx*=.8;if((k.w||k[' ']||k.arrowup)&&py>=365)vy=-12;vy+=.55;px+=vx;py+=vy;if(py>365){py=365;vy=0}px=Math.max(0,Math.min(790,px));if(px>750){coins=3;score=900;done=true;premiumFinish(g.id,p,score,true)}else{if(Math.random()<.025)coins=Math.min(6,coins+1);score=Math.min(850,Math.floor((px/750)*700+coins*40));s.textContent=score+' pts • 🪙 '+coins;info.textContent='Chegue ao portal verde • '+Math.floor(px/7.5)+'%';requestAnimationFrame(loop)}}loop();
+ const [c,s,info,actions]=premiumCanvas(g.name,'FASE '+p+' • mundo grande • câmera acompanha o jogador',);
+ const x=c.getContext('2d');
+ const W=820,H=460, worldW=3600+Math.min(2200,p*35);
+ let player={x:80,y:300,w:28,h:42,vx:0,vy:0,onGround:false};
+ let cam=0,coins=0,score=0,done=false,won=false,k={};
+ const gravity=.62, speed=4.2, jump=-12;
+ const platforms=[{x:0,y:410,w:430,h:50},{x:520,y:410,w:360,h:50},{x:980,y:410,w:300,h:50},{x:1400,y:410,w:430,h:50},{x:1980,y:410,w:300,h:50},{x:2420,y:410,w:520,h:50},{x:3100,y:410,w:500,h:50}];
+ for(let i=0;i<18+Math.floor(p/4);i++){
+   const gap=90+(i*73+p*31)%150;
+   const base=320+i*175+(p*29%90);
+   platforms.push({x:base,y:300-(i%4)*42,w:110+(i%3)*35,h:16});
+ }
+ const pits=[];
+ for(let i=0;i<15+Math.floor(p/8);i++) pits.push({x:420+i*215+(p*17%55),w:70+(i%3)*25});
+ const enemies=[];
+ for(let i=0;i<10+Math.floor(p/7);i++) enemies.push({x:350+i*290+(p*23%100),y:360,w:32,h:32,vx:i%2?1.1:-1.1,alive:true});
+ const coinList=[];
+ for(let i=0;i<30;i++) coinList.push({x:180+i*112+(p*13%50),y:220-(i%5)*25,r:9,taken:false});
+ const portal={x:worldW-150,y:330,w:42,h:80};
+ const key=e=>{k[e.key.toLowerCase()]=1;if(['arrowleft','arrowright','arrowup',' '].includes(e.key.toLowerCase()))e.preventDefault()},up=e=>k[e.key.toLowerCase()]=0;
+ addEventListener('keydown',key);addEventListener('keyup',up);
+ function hit(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
+ function restart(){player={x:80,y:300,w:28,h:42,vx:0,vy:0,onGround:false};cam=0;score=Math.max(0,score-80);info.textContent='💥 Você caiu ou foi atingido. Voltando ao último ponto...'}
+ function draw(){
+   x.fillStyle='#75c8f5';x.fillRect(0,0,W,H);
+   x.fillStyle='#dff6ff';for(let i=0;i<18;i++){let sx=(i*230-cam*.18)%1000;x.fillRect((sx+1000)%1000,55+(i%4)*28,70,12)}
+   x.fillStyle='#67b84f';x.fillRect(0,390,W,70);
+   x.save();x.translate(-cam,0);
+   x.fillStyle='#8a5a2b';platforms.forEach(q=>{x.fillRect(q.x,q.y,q.w,q.h);x.fillStyle='#5db64b';x.fillRect(q.x,q.y,q.w,7);x.fillStyle='#8a5a2b'});
+   x.fillStyle='#151b24';pits.forEach(q=>x.fillRect(q.x,410,q.w,50));
+   coinList.forEach(q=>{if(!q.taken){x.fillStyle='#ffd447';x.beginPath();x.arc(q.x,q.y,q.r,0,Math.PI*2);x.fill();x.fillStyle='#fff3a0';x.beginPath();x.arc(q.x-3,q.y-3,2,0,Math.PI*2);x.fill()}});
+   enemies.forEach(e=>{if(!e.alive)return;x.fillStyle='#b83b45';x.fillRect(e.x,e.y,e.w,e.h);x.fillStyle='#fff';x.fillRect(e.x+5,e.y+7,6,6);x.fillRect(e.x+21,e.y+7,6,6);x.fillStyle='#222';x.fillRect(e.x+8,e.y+25,16,5)});
+   x.fillStyle='#26d66f';x.fillRect(portal.x,portal.y,portal.w,portal.h);x.fillStyle='#d8ffe8';x.fillRect(portal.x+9,portal.y+12,24,56);
+   x.fillStyle='#ef4d4d';x.fillRect(player.x,player.y,player.w,player.h);x.fillStyle='#202936';x.fillRect(player.x+5,player.y+28,18,14);
+   x.restore();
+   x.fillStyle='#08101b';x.fillRect(14,14,300,42);x.fillStyle='#fff';x.font='bold 16px system-ui';x.fillText('FASE '+p+'  •  '+Math.floor(player.x/worldW*100)+'%  •  🪙 '+coins,28,40);
+ }
+ function loop(){
+   if(done)return;
+   const left=k.a||k.arrowleft,right=k.d||k.arrowright;
+   player.vx=left?-speed:right?speed:player.vx*.78;
+   if((k.w||k[' ']||k.arrowup)&&player.onGround){player.vy=jump;player.onGround=false}
+   player.vy+=gravity;
+   const oldY=player.y;player.x+=player.vx;player.x=Math.max(0,Math.min(worldW-player.w,player.x));player.y+=player.vy;player.onGround=false;
+   for(const q of platforms){
+     if(player.x+player.w>q.x&&player.x<q.x+q.w&&oldY+player.h<=q.y&&player.y+player.h>=q.y&&player.vy>=0){player.y=q.y-player.h;player.vy=0;player.onGround=true}
+   }
+   for(const q of coinList)if(!q.taken&&Math.hypot(player.x+14-q.x,player.y+20-q.y)<28){q.taken=true;coins++;score+=50;gameSound('coin')}
+   for(const e of enemies){
+     if(!e.alive)continue;
+     e.x+=e.vx;
+     const near=platforms.find(q=>e.x>=q.x&&e.x<q.x+q.w&&Math.abs((e.y+e.h)-q.y)<5);
+     if(!near||e.x<near.x||e.x+e.w>near.x+near.w)e.vx*=-1;
+     if(hit(player,e)){
+       if(player.vy>1&&player.y+player.h<e.y+18){e.alive=false;player.vy=-8;score+=120;gameSound('coin')}
+       else {restart();break}
+     }
+   }
+   if(player.y>500){restart()}
+   if(player.x+player.w>portal.x&&player.x<portal.x+portal.w&&player.y+player.h>portal.y){
+     done=true;won=true;score+=700+coins*20;premiumFinish(g.id,p,Math.min(2000,score),true);info.textContent='🏆 Portal alcançado! Fase '+p+' concluída.';
+   }
+   cam=Math.max(0,Math.min(worldW-W,player.x-W*.38));
+   draw();
+   s.textContent=score+' pts • 🪙 '+coins+' • 📍 '+Math.floor(player.x/worldW*100)+'%';
+   if(!won)info.textContent='← → mover • ↑/ESPAÇO pular • atravesse buracos, derrote inimigos e chegue ao portal verde';
+   if(!done)requestAnimationFrame(loop);
+ }
+ draw();loop();
 }
 function premiumRace(g,p){
  const[c,s,info]=premiumCanvas(g.name,'Circuito com tráfego • Fase '+p);const x=c.getContext('2d');let car=390,lane=1,speed=5,dist=0,score=0,obs=[],k={},done=false;for(let i=0;i<5;i++)obs.push({lane:(i+p)%3,y:-i*150-100});
