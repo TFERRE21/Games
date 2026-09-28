@@ -235,7 +235,7 @@ function buildCampaignChallenge(id,l){
   const intro='<div class="phase-info"><span>🎯 OBJETIVO</span><span>⚔️ '+difficulty+'</span><span>🌎 MUNDO '+worldForPhase(l)+'</span></div>';
   if(g.cat==='cooking'){
     const ingredients=['🍅','🧀','🍞','🍫','🥕','🍓','🥚','🥩'],need=[ingredients[l%8],ingredients[(l+2)%8],ingredients[(l+4)%8]];
-    box.innerHTML=intro+'<p>Monte a receita escolhendo <b>exatamente 3 ingredientes</b>.</p><div class="campaign-options">'+ingredients.map(x=>'<button type="button" data-v="'+x+'">'+x+'</button>').join('')+'</div><div class="mission-hint">Receita: '+need.join(' • ')+'</div>';
+    box.innerHTML=intro+'<p>Monte a receita escolhendo <b>3 ingredientes</b>. Observe a combinação do pedido e reproduza corretamente.</p><div class="campaign-options">'+ingredients.map(x=>'<button type="button" data-v="'+x+'">'+x+'</button>').join('')+'</div><div class="mission-hint">Pedido do cliente: <b>'+need.join(' • ')+'</b></div>';
     box.dataset.need=JSON.stringify(need);
     box.querySelectorAll('button').forEach(b=>b.onclick=()=>b.classList.toggle('selected'));
   }else if(g.cat==='coloring'||g.cat==='girls'){
