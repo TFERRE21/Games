@@ -322,8 +322,11 @@ rpg.xp=Number.isFinite(rpg.xp)?rpg.xp:0;
 rpg.level=Number.isFinite(rpg.level)?rpg.level:1;
 rpg.stars=rpg.stars||{};
 rpg.worlds=rpg.worlds||{};
-rpg.phaseScores=rpg.phaseScores||{};\nrpg.nextLifeAt=Number(rpg.nextLifeAt)||0;
-function saveRPG(){localStorage.setItem(RPG_KEY,JSON.stringify(rpg));updateRPGHud()}\nfunction recoverLives(){if(rpg.lives>=5||!rpg.nextLifeAt)return;const now=Date.now();while(rpg.lives<5&&rpg.nextLifeAt&&now>=rpg.nextLifeAt){rpg.lives++;rpg.nextLifeAt=rpg.lives<5?now+60000:0}saveRPG()}\nfunction gameSound(type){try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return;const a=gameSound.ctx||(gameSound.ctx=new A()),o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=type==='win'?720:type==='fail'?150:420;g.gain.setValueAtTime(.0001,a.currentTime);g.gain.exponentialRampToValueAtTime(.08,a.currentTime+.01);g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+.16);o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+.18)}catch(e){}}
+rpg.phaseScores=rpg.phaseScores||{};
+rpg.nextLifeAt=Number(rpg.nextLifeAt)||0;
+function saveRPG(){localStorage.setItem(RPG_KEY,JSON.stringify(rpg));updateRPGHud()}
+function recoverLives(){if(rpg.lives>=5||!rpg.nextLifeAt)return;const now=Date.now();while(rpg.lives<5&&rpg.nextLifeAt&&now>=rpg.nextLifeAt){rpg.lives++;rpg.nextLifeAt=rpg.lives<5?now+60000:0}saveRPG()}
+function gameSound(type){try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return;const a=gameSound.ctx||(gameSound.ctx=new A()),o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=type==='win'?720:type==='fail'?150:420;g.gain.setValueAtTime(.0001,a.currentTime);g.gain.exponentialRampToValueAtTime(.08,a.currentTime+.01);g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+.16);o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+.18)}catch(e){}}
 function xpForLevel(l){return 100+(l-1)*50}
 function recalcLevel(){while(rpg.xp>=xpForLevel(rpg.level)){rpg.xp-=xpForLevel(rpg.level);rpg.level++}}
 function addRPGReward(id,phase,stars){
@@ -477,15 +480,26 @@ function premiumFlight(g,p){
 }
 const originalLaunchPremium=launch;
 launch=function(id){if(PREMIUM_GAMES.has(id)){const g=games.find(x=>x.id===id)||games[0];document.querySelector('#gameCategory').textContent=g.cat.toUpperCase();document.querySelector('#gameTitle').textContent=g.name;modal.classList.remove('hidden');premiumGame(id);return}originalLaunchPremium(id)};
-\n// ===== PORTAL COMPLETO: PERFIL, LOJA, MISSOES, CONQUISTAS E SALAS =====
+
+// ===== PORTAL COMPLETO: PERFIL, LOJA, MISSOES, CONQUISTAS E SALAS =====
 const PORTAL_KEY='games_portal_v2';
-const portal=JSON.parse(localStorage.getItem(PORTAL_KEY)||'{}');\nlet portalSyncBusy=false;
+const portal=JSON.parse(localStorage.getItem(PORTAL_KEY)||'{}');
+let portalSyncBusy=false;
 portal.nickname=portal.nickname||'Jogador';
 portal.purchases=portal.purchases||[];
 portal.achievements=portal.achievements||[];
 portal.daily=portal.daily||{date:'',claimed:false};
 portal.missions=portal.missions||{};
-async function syncPortal(){\n if(!apiToken||portalSyncBusy)return;\n portalSyncBusy=true;\n try{const d=await api('/api/portal');const remote=d.portal||{};const hasRemote=(remote.purchases||[]).length||(remote.achievements||[]).length||remote.nickname&&remote.nickname!=='Jogador'||remote.daily&&remote.daily.date||remote.missions&&Object.keys(remote.missions).length;\n  if(!hasRemote&&((portal.purchases||[]).length||(portal.achievements||[]).length||portal.nickname!=='Jogador'||Object.keys(portal.missions||{}).length)){await persistPortal();return}\n  portal.nickname=remote.nickname||portal.nickname||'Jogador';portal.purchases=[...new Set([...(portal.purchases||[]),...(remote.purchases||[])])];portal.achievements=[...new Set([...(portal.achievements||[]),...(remote.achievements||[])])];portal.daily=remote.daily&&remote.daily.date?remote.daily:portal.daily;portal.missions=remote.missions&&Object.keys(remote.missions).length?remote.missions:portal.missions;savePortal();\n }catch(e){}finally{portalSyncBusy=false}\n}\nasync function persistPortal(){if(!apiToken)return;try{await api('/api/portal',{method:'POST',body:JSON.stringify({portal})})}catch(e){}}\nfunction savePortal(){localStorage.setItem(PORTAL_KEY,JSON.stringify(portal));if(apiToken&&!portalSyncBusy)persistPortal()}
+async function syncPortal(){
+ if(!apiToken||portalSyncBusy)return;
+ portalSyncBusy=true;
+ try{const d=await api('/api/portal');const remote=d.portal||{};const hasRemote=(remote.purchases||[]).length||(remote.achievements||[]).length||remote.nickname&&remote.nickname!=='Jogador'||remote.daily&&remote.daily.date||remote.missions&&Object.keys(remote.missions).length;
+  if(!hasRemote&&((portal.purchases||[]).length||(portal.achievements||[]).length||portal.nickname!=='Jogador'||Object.keys(portal.missions||{}).length)){await persistPortal();return}
+  portal.nickname=remote.nickname||portal.nickname||'Jogador';portal.purchases=[...new Set([...(portal.purchases||[]),...(remote.purchases||[])])];portal.achievements=[...new Set([...(portal.achievements||[]),...(remote.achievements||[])])];portal.daily=remote.daily&&remote.daily.date?remote.daily:portal.daily;portal.missions=remote.missions&&Object.keys(remote.missions).length?remote.missions:portal.missions;savePortal();
+ }catch(e){}finally{portalSyncBusy=false}
+}
+async function persistPortal(){if(!apiToken)return;try{await api('/api/portal',{method:'POST',body:JSON.stringify({portal})})}catch(e){}}
+function savePortal(){localStorage.setItem(PORTAL_KEY,JSON.stringify(portal));if(apiToken&&!portalSyncBusy)persistPortal()}
 function totalStars(){return Object.values(rpg.stars||{}).reduce((a,b)=>a+b,0)}
 function totalPhases(){return Object.keys(rpg.stars||{}).filter(k=>(rpg.stars[k]||0)>0).length}
 const ACH=[
@@ -549,7 +563,8 @@ addRPGReward=function(id,phase,stars){oldAddRPGReward(id,phase,stars);updateMiss
 document.addEventListener('click',e=>{const b=e.target.closest('[data-filter]');if(!b||b.classList.contains('navbtn'))return;document.querySelectorAll('.navbtn').forEach(x=>x.classList.remove('active'));const n=document.querySelector('.navbtn[data-filter="'+b.dataset.filter+'"]');if(n)n.classList.add('active');render(b.dataset.filter,'');window.scrollTo({top:document.querySelector('#grid').offsetTop-80,behavior:'smooth'})});
 document.querySelector('#showProgress')?.addEventListener('click',()=>{openPanel('#progressPanel');renderProgress()});
 document.querySelector('#showMissions')?.addEventListener('click',()=>{openPanel('#missionsPanel');renderMissions()});
-document.querySelector('#showProfile')?.addEventListener('click',()=>{openPanel('#profilePanel');renderProfile()});\ndocument.querySelector('#showMultiplayer')?.addEventListener('click',()=>openPanel('#multiplayerPanel'));
+document.querySelector('#showProfile')?.addEventListener('click',()=>{openPanel('#profilePanel');renderProfile()});
+document.querySelector('#showMultiplayer')?.addEventListener('click',()=>openPanel('#multiplayerPanel'));
 
 // ===== MULTIPLAYER E SINCRONIZACAO =====
 let currentRoom='';
