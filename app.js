@@ -388,7 +388,7 @@ addRPGReward=function(id,phase,stars){oldAddRPGReward(id,phase,stars);updateMiss
 document.addEventListener('click',e=>{const b=e.target.closest('[data-filter]');if(!b||b.classList.contains('navbtn'))return;document.querySelectorAll('.navbtn').forEach(x=>x.classList.remove('active'));const n=document.querySelector('.navbtn[data-filter="'+b.dataset.filter+'"]');if(n)n.classList.add('active');render(b.dataset.filter,'');window.scrollTo({top:document.querySelector('#grid').offsetTop-80,behavior:'smooth'})});
 document.querySelector('#showProgress')?.addEventListener('click',()=>{openPanel('#progressPanel');renderProgress()});
 document.querySelector('#showMissions')?.addEventListener('click',()=>{openPanel('#missionsPanel');renderMissions()});
-document.querySelector('#showProfile')?.addEventListener('click',()=>{openPanel('#profilePanel');renderProfile()});
+document.querySelector('#showProfile')?.addEventListener('click',()=>{openPanel('#profilePanel');renderProfile()});\ndocument.querySelector('#showMultiplayer')?.addEventListener('click',()=>openPanel('#multiplayerPanel'));
 
 // ===== MULTIPLAYER E SINCRONIZACAO =====
 let currentRoom='';
