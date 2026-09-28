@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS scores(
  score INTEGER NOT NULL DEFAULT 0,
  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_scores_game_score ON scores(game_id,score DESC);\nCREATE TABLE IF NOT EXISTS player_progress(\n user_id INTEGER PRIMARY KEY,\n lives INTEGER NOT NULL DEFAULT 5,\n coins INTEGER NOT NULL DEFAULT 0,\n xp INTEGER NOT NULL DEFAULT 0,\n level INTEGER NOT NULL DEFAULT 1,\n updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\nCREATE TABLE IF NOT EXISTS phase_progress(\n user_id INTEGER NOT NULL,\n game_id TEXT NOT NULL,\n phase INTEGER NOT NULL,\n stars INTEGER NOT NULL DEFAULT 0,\n score INTEGER NOT NULL DEFAULT 0,\n updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,\n PRIMARY KEY(user_id,game_id,phase)\n);
+CREATE INDEX IF NOT EXISTS idx_scores_game_score ON scores(game_id,score DESC);\nCREATE TABLE IF NOT EXISTS rooms(\n code TEXT PRIMARY KEY,\n game_id TEXT NOT NULL DEFAULT 'tictactoe',\n host_id INTEGER NOT NULL,\n guest_id INTEGER,\n status TEXT NOT NULL DEFAULT 'waiting',\n created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\nCREATE TABLE IF NOT EXISTS player_progress(\n user_id INTEGER PRIMARY KEY,\n lives INTEGER NOT NULL DEFAULT 5,\n coins INTEGER NOT NULL DEFAULT 0,\n xp INTEGER NOT NULL DEFAULT 0,\n level INTEGER NOT NULL DEFAULT 1,\n updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\nCREATE TABLE IF NOT EXISTS phase_progress(\n user_id INTEGER NOT NULL,\n game_id TEXT NOT NULL,\n phase INTEGER NOT NULL,\n stars INTEGER NOT NULL DEFAULT 0,\n score INTEGER NOT NULL DEFAULT 0,\n updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,\n PRIMARY KEY(user_id,game_id,phase)\n);
 `);
 
 const adminEmail=process.env.ADMIN_EMAIL;
@@ -80,6 +80,25 @@ app.post('/api/login',(req,res)=>{
  res.json({user:{id:u.id,name:u.name,email:u.email,role:u.role},token:token(u)});
 });
 
+function roomCode(){return Math.random().toString(36).slice(2,8).toUpperCase()}
+app.post('/api/rooms',auth,(req,res)=>{
+ let code;do{code=roomCode()}while(db.prepare('SELECT code FROM rooms WHERE code=?').get(code));
+ const gameId=String(req.body.gameId||'tictactoe').slice(0,80);
+ db.prepare('INSERT INTO rooms(code,game_id,host_id) VALUES(?,?,?)').run(code,gameId,req.user.id);
+ res.json({code,gameId,status:'waiting'});
+});
+app.post('/api/rooms/:code/join',auth,(req,res)=>{
+ const code=String(req.params.code).toUpperCase(),room=db.prepare('SELECT * FROM rooms WHERE code=?').get(code);
+ if(!room)return res.status(404).json({error:'Sala não encontrada'});
+ if(room.host_id===req.user.id)return res.json({code,status:room.status,gameId:room.game_id});
+ if(room.guest_id)return res.status(409).json({error:'Sala cheia'});
+ db.prepare("UPDATE rooms SET guest_id=?,status='ready' WHERE code=?").run(req.user.id,code);
+ res.json({code,status:'ready',gameId:room.game_id});
+});
+app.get('/api/rooms/:code',auth,(req,res)=>{
+ const room=db.prepare('SELECT code,game_id,status,created_at FROM rooms WHERE code=?').get(String(req.params.code).toUpperCase());
+ if(!room)return res.status(404).json({error:'Sala não encontrada'});res.json({room});
+});
 app.get('/api/progress',auth,(req,res)=>{
  const p=db.prepare('SELECT lives,coins,xp,level FROM player_progress WHERE user_id=?').get(req.user.id)||{lives:5,coins:0,xp:0,level:1};
  const phases=db.prepare('SELECT game_id,phase,stars,score FROM phase_progress WHERE user_id=?').all(req.user.id);
