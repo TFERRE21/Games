@@ -315,3 +315,77 @@ function addRPGPanel(){
 (function injectRPGStyle(){if(document.querySelector('#rpgStyle'))return;const s=document.createElement('style');s.id='rpgStyle';s.textContent=`
 .rpg-hud{margin:10px 0;padding:12px 16px;background:#101a2b;border:1px solid #33405a;border-radius:12px;text-align:center;font-weight:700;line-height:1.8}.campaign-head{position:relative}.campaign-level{white-space:nowrap}.campaign-body{min-height:320px}.campaign-actions{gap:12px}.campaign-progress span{background:linear-gradient(90deg,#18d6a0,#6d5dfc)}`;
 document.head.appendChild(s)})();
+
+// ===== PORTAL COMPLETO: PERFIL, LOJA, MISSOES, CONQUISTAS E SALAS =====
+const PORTAL_KEY='games_portal_v2';
+const portal=JSON.parse(localStorage.getItem(PORTAL_KEY)||'{}');
+portal.nickname=portal.nickname||'Jogador';
+portal.purchases=portal.purchases||[];
+portal.achievements=portal.achievements||[];
+portal.daily=portal.daily||{date:'',claimed:false};
+portal.missions=portal.missions||{};
+function savePortal(){localStorage.setItem(PORTAL_KEY,JSON.stringify(portal))}
+function totalStars(){return Object.values(rpg.stars||{}).reduce((a,b)=>a+b,0)}
+function totalPhases(){return Object.keys(rpg.stars||{}).filter(k=>(rpg.stars[k]||0)>0).length}
+const ACH=[
+ ['first','🎮 Primeira fase','Conclua 1 fase',1],
+ ['ten','🔟 10 fases','Conclua 10 fases',10],
+ ['fifty','🏅 50 fases','Conclua 50 fases',50],
+ ['hundred','💯 Centena','Conclua 100 fases',100],
+ ['stars','⭐ Colecionador','Consiga 50 estrelas',50],
+ ['coins','🪙 Rico','Junte 1.000 moedas',1000],
+ ['level5','⚡ Nível 5','Alcance o nível 5',5],
+ ['level10','👑 Nível 10','Alcance o nível 10',10],
+ ['world5','🌎 Explorador','Chegue ao Mundo 5',5],
+ ['world10','🚀 Mestre','Chegue ao Mundo 10',10]
+];
+function refreshAchievements(){
+ const vals={first:totalPhases()>=1,ten:totalPhases()>=10,fifty:totalPhases()>=50,hundred:totalPhases()>=100,stars:totalStars()>=50,coins:rpg.coins>=1000,level5:rpg.level>=5,level10:rpg.level>=10,world5:Object.values(rpg.stars||{}).some((_,i)=>false)||totalPhases()>=41,world10:totalPhases()>=91};
+ ACH.forEach(a=>{if(vals[a[0]]&&!portal.achievements.includes(a[0]))portal.achievements.push(a[0])});savePortal();
+}
+function renderProgress(){
+ refreshAchievements();
+ const wm=document.querySelector('#worldMap'),ag=document.querySelector('#achievementGrid');if(!wm||!ag)return;
+ wm.innerHTML=Array.from({length:10},(_,i)=>{const start=i*10+1,done=Object.keys(rpg.stars||{}).filter(k=>{const p=+k.split(':')[1];return p>=start&&p<start+10}).length;const unlocked=i===0||done>0||totalPhases()>=i*10;return '<div class="world-card '+(unlocked?'unlocked':'locked')+'"><div class="world-icon">'+(unlocked?['🌳','🌆','🏜️','❄️','🚀','🌋','🏝️','🏰','🌌','👑'][i]:'🔒')+'</div><b>Mundo '+(i+1)+'</b><small>Fases '+start+'–'+(start+9)+'</small><span>'+done+'/10 concluídas</span></div>'}).join('');
+ ag.innerHTML=ACH.map(a=>'<div class="achievement '+(portal.achievements.includes(a[0])?'unlocked':'')+'"><div>'+a[1]+'</div><small>'+a[2]+'</small></div>').join('');
+}
+function claimDaily(){
+ const today=new Date().toISOString().slice(0,10);
+ if(portal.daily.date===today){document.querySelector('#dailyBonus').innerHTML='<div class="bonus-box">🎁 Bônus de hoje já coletado. Volte amanhã!</div>';return}
+ portal.daily={date:today,claimed:true};rpg.coins+=100;rpg.xp+=50;recalcLevel();saveRPG();savePortal();
+ document.querySelector('#dailyBonus').innerHTML='<div class="bonus-box">🎉 +100 🪙 e +50 XP recebidos!</div>';
+}
+function renderMissions(){
+ const date=new Date().toISOString().slice(0,10), m=portal.missions[date]||{phases:0,games:0,stars:0};
+ const goals=[['🎯','Concluir 3 fases',m.phases,3,80],['🎮','Jogar 3 jogos diferentes',m.games,3,100],['⭐','Ganhar 5 estrelas',m.stars,5,120]];
+ document.querySelector('#dailyBonus').innerHTML='<div class="bonus-box"><b>🎁 Bônus diário</b><p>Entre todos os dias para ganhar 100 moedas + 50 XP.</p><button class="primary" id="claimDaily">COLETAR BÔNUS</button></div>';
+ document.querySelector('#claimDaily').onclick=claimDaily;
+ document.querySelector('#missionGrid').innerHTML=goals.map(g=>'<div class="mission-card"><b>'+g[0]+' '+g[1]+'</b><div class="mission-bar"><span style="width:'+Math.min(100,g[2]/g[3]*100)+'%"></span></div><small>'+g[2]+'/'+g[3]+' • Recompensa '+g[4]+' 🪙</small></div>').join('');
+}
+const SHOP=[
+ ['avatar1','🦊','Avatar Raposa',200],['avatar2','🐲','Avatar Dragão',300],['theme','🌈','Tema Colorido',500],
+ ['frame','💎','Moldura Diamante',750],['car','🏎️','Skin Turbo',400],['pet','🐱','Pet Companheiro',350],
+ ['crown','👑','Coroa de Campeão',1000],['rocket','🚀','Efeito Foguete',600]
+];
+function renderShop(){
+ const el=document.querySelector('#shopGrid');if(!el)return;
+ el.innerHTML=SHOP.map(x=>{const owned=portal.purchases.includes(x[0]);return '<div class="shop-item"><div class="shop-art">'+x[1]+'</div><b>'+x[2]+'</b><small>'+x[3]+' 🪙</small><button class="primary" data-buy="'+x[0]+'" '+(owned?'disabled':'')+'>'+(owned?'ADQUIRIDO':'COMPRAR')+'</button></div>'}).join('');
+ el.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{const x=SHOP.find(y=>y[0]===b.dataset.buy);if(!x||portal.purchases.includes(x[0]))return;if(rpg.coins<x[3]){alert('Moedas insuficientes.');return}rpg.coins-=x[3];portal.purchases.push(x[0]);saveRPG();savePortal();renderShop();renderProfile()});
+}
+function renderProfile(){
+ const el=document.querySelector('#profileCard');if(!el)return;
+ const need=xpForLevel(rpg.level), name=portal.nickname||state.user||'Jogador';
+ el.innerHTML='<div class="profile-avatar">'+(portal.purchases.includes('crown')?'👑':'🎮')+'</div><div><h2>'+name+'</h2><p>Nível '+rpg.level+' • '+rpg.xp+'/'+need+' XP</p><div class="profile-stats"><span>❤️ '+rpg.lives+'</span><span>🪙 '+rpg.coins+'</span><span>⭐ '+totalStars()+'</span><span>🎯 '+totalPhases()+' fases</span></div><input id="nicknameInput" value="'+name.replace(/"/g,'&quot;')+'" maxlength="30"><button class="primary" id="saveNick">Salvar nome</button></div>';
+ el.querySelector('#saveNick').onclick=()=>{portal.nickname=el.querySelector('#nicknameInput').value.trim()||'Jogador';savePortal();renderProfile()};
+ renderShop();
+}
+function updateMissionProgress(id,stars){
+ const date=new Date().toISOString().slice(0,10),m=portal.missions[date]||{phases:0,games:0,stars:0,played:{}};
+ m.phases++;m.stars+=stars;m.played=m.played||{};m.played[id]=1;m.games=Object.keys(m.played).length;portal.missions[date]=m;savePortal();
+}
+const oldAddRPGReward=addRPGReward;
+addRPGReward=function(id,phase,stars){oldAddRPGReward(id,phase,stars);updateMissionProgress(id,stars);refreshAchievements()};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-filter]');if(!b||b.classList.contains('navbtn'))return;document.querySelectorAll('.navbtn').forEach(x=>x.classList.remove('active'));const n=document.querySelector('.navbtn[data-filter="'+b.dataset.filter+'"]');if(n)n.classList.add('active');render(b.dataset.filter,'');window.scrollTo({top:document.querySelector('#grid').offsetTop-80,behavior:'smooth'})});
+document.querySelector('#showProgress')?.addEventListener('click',()=>{openPanel('#progressPanel');renderProgress()});
+document.querySelector('#showMissions')?.addEventListener('click',()=>{openPanel('#missionsPanel');renderMissions()});
+document.querySelector('#showProfile')?.addEventListener('click',()=>{openPanel('#profilePanel');renderProfile()});
