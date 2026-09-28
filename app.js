@@ -367,73 +367,64 @@ function showSpecialIntro(phase){
  document.querySelector('#premiumInfo').innerHTML='<b>'+(boss?'👹 BATALHA DE CHEFE':'🎉 EVENTO DO MUNDO')+'</b> • '+(boss?boss.desc:ev.desc)+' • <strong>'+ev.bonus+'</strong>';
 }
 function launchBossOrPremium(g,p){return BOSS_EVENTS[p]?premiumBoss(g,p,BOSS_EVENTS[p]):premiumGameCore(g,p)}
+function bossVictory(g,p,boss,score,onDone){
+ const info=document.querySelector('#premiumInfo'), actions=document.querySelector('#premiumActions');
+ if(!info||!actions)return;
+ info.innerHTML='<div class="boss-victory"><div class="boss-victory-icon">🏆</div><div class="boss-victory-title">'+(p===100?'CAMPANHA CONCLUÍDA!':'CHEFE DERROTADO!')+'</div><div class="boss-victory-boss">'+boss.icon+' '+boss.name+'</div><div class="boss-victory-stars">⭐⭐⭐</div><div class="boss-victory-score">'+score+' pontos</div><p>'+(p===100?'Você venceu o chefe final e completou os 100 desafios!':'O mundo foi conquistado. Prepare-se para o próximo!')+'</p></div>';
+ actions.innerHTML='';
+ const b=document.createElement('button');b.className='primary';b.textContent=p===100?'🏆 VER RESULTADO FINAL':'✨ CONTINUAR AVENTURA';b.onclick=()=>{if(p===100){info.innerHTML='<b>👑 CAMPEÃO DA CAMPANHA</b><br>100 fases concluídas • '+score+' pontos';actions.innerHTML='<button class="primary" onclick="closeGame()">FECHAR</button>'}else launch(g.id)};actions.appendChild(b);
+}
 function premiumBoss(g,p,boss){
  const[c,s,info]=premiumCanvas(g.name,'👹 '+boss.name+' • Fase '+p),x=c.getContext('2d');
- let k={},done=false,score=0,time=0,player=390,shots=[],enemies=[];
+ let k={},done=false,score=0,time=0,player=390,shots=[],enemies=[],hp=3,bossHp=5,inv=0,phase=1;
  const key=e=>{k[e.key.toLowerCase()]=1;if(e.key===' ')e.preventDefault()},up=e=>k[e.key.toLowerCase()]=0;
  addEventListener('keydown',key);addEventListener('keyup',up);
  if(boss.type==='space'||boss.type==='final')for(let i=0;i<7+(p===100?3:0);i++)enemies.push({x:80+(i%5)*150,y:70+Math.floor(i/5)*65,hp:p>=50?2:1});
+ function bar(label,val,max){const w=Math.max(0,Math.min(100,val/max*100));return '<div class="boss-bar-wrap"><b>'+label+'</b><div class="boss-bar"><span style="width:'+w+'%"></span></div></div>'}
+ function drawHud(){
+  info.innerHTML=bar('👹 '+boss.name,bossHp,5)+bar('❤️ JOGADOR',hp,3)+'<span class="boss-phase">ETAPA '+phase+'/3</span>';
+ }
+ function hitPlayer(){
+  if(inv>0)return;hp--;inv=45;gameSound('fail');if(hp<=0){done=true;info.innerHTML='<b>💥 DERROTA</b><br>O chefe venceu. Tente novamente.';return true}return false;
+ }
  function loop(){
-  if(done)return;time++;x.fillStyle=boss.type==='final'?'#120719':'#071226';x.fillRect(0,0,820,460);
+  if(done)return;time++;inv=Math.max(0,inv-1);
+  x.fillStyle=boss.type==='final'?'#120719':'#071226';x.fillRect(0,0,820,460);
+  // arena comum
+  x.fillStyle='#172238';x.fillRect(0,350,820,110);
   if(boss.type==='race'){
-   x.fillStyle='#30343b';x.fillRect(150,0,520,460);x.fillStyle='#fff';for(let y=-40+(time*6%80);y<460;y+=80)x.fillRect(405,y,8,40);
+   x.fillStyle='#30343b';x.fillRect(150,0,520,350);x.fillStyle='#fff';for(let y=-40+(time*6%80);y<350;y+=80)x.fillRect(405,y,8,40);
    if(k.a||k.arrowleft)player=Math.max(175,player-6);if(k.d||k.arrowright)player=Math.min(645,player+6);
-   const bx=410+Math.sin(time/18)*220;x.fillStyle='#e85d5d';x.fillRect(bx-22,80,44,65);x.fillStyle='#20d6a0';x.fillRect(player-25,365,50,80);
-   score=Math.min(1000,Math.floor(time*4));if(Math.abs(player-bx)<48&&time>45){done=true;premiumFinish(g.id,p,900,true);return}
-   if(time>420){done=true;info.textContent='💥 O chefe escapou. Tente novamente.';gameSound('fail');return}
+   const bx=410+Math.sin(time/(24-phase*3))*220;
+   x.fillStyle='#e85d5d';x.fillRect(bx-22,90,44,65);x.fillStyle='#20d6a0';x.fillRect(player-25,365,50,80);
+   if(Math.abs(player-bx)<48&&time%70<3){bossHp--;score+=100;if(bossHp===3)phase=2;if(bossHp===1)phase=3}
+   if(Math.abs(player-bx)<40&&time%90<4)hitPlayer();
   }else if(boss.type==='precision'){
-   x.fillStyle='#26374d';x.fillRect(0,0,820,460);const tx=410+Math.sin(time/14)*300,ty=220+Math.cos(time/19)*120;
-   x.fillStyle='#ffd166';x.beginPath();x.arc(tx,ty,45,0,7);x.fill();x.fillStyle='#20d6a0';x.fillRect(player-18,385,36,45);
+   x.fillStyle='#26374d';x.fillRect(0,0,820,460);const tx=410+Math.sin(time/(14-phase*2))*300,ty=180+Math.cos(time/19)*100;
+   x.fillStyle='#ffd166';x.beginPath();x.arc(tx,ty,45,0,7);x.fill();x.fillStyle=inv?'#8ff':'#20d6a0';x.fillRect(player-18,385,36,45);
    if(k.a||k.arrowleft)player-=5;if(k.d||k.arrowright)player+=5;player=Math.max(20,Math.min(800,player));
-   if((k[' ']||k.w)&&Math.abs(player-tx)<55&&time>30){done=true;premiumFinish(g.id,p,1000,true);return}
-   if(time>600){done=true;info.textContent='⏱️ O chefe venceu desta vez.';gameSound('fail');return}
+   if((k[' ']||k.w)&&Math.abs(player-tx)<55&&time>30){bossHp--;score+=180;if(bossHp===3)phase=2;if(bossHp===1)phase=3}
+   if(time%85===0&&Math.abs(player-tx)>100)hitPlayer();
   }else if(boss.type==='collect'){
    x.fillStyle='#16704a';x.fillRect(0,0,820,460);x.fillStyle='#ffd166';
    for(let i=0;i<12;i++){const cx=(i*137+time*2)%780+20,cy=80+(i*67)%300;x.beginPath();x.arc(cx,cy,10,0,7);x.fill()}
-   if(k.a||k.arrowleft)player-=6;if(k.d||k.arrowright)player+=6;player=Math.max(20,Math.min(800,player));if(time%12===0)score+=40;
-   if(time>420){done=true;premiumFinish(g.id,p,Math.min(1000,score+650),true);return}
+   if(k.a||k.arrowleft)player-=6;if(k.d||k.arrowright)player+=6;player=Math.max(20,Math.min(800,player));
+   if(time%12===0)score+=40;if(time%100===0){bossHp--;phase=Math.min(3,6-bossHp)}
   }else{
    if(k.a||k.arrowleft)player-=6;if(k.d||k.arrowright)player+=6;player=Math.max(25,Math.min(795,player));
    if(k[' ']&&shots.length<10)shots.push({x:player,y:390});shots.forEach(q=>q.y-=10);shots=shots.filter(q=>q.y>0);
-   enemies.forEach(e=>shots.forEach(q=>{if(Math.abs(q.x-e.x)<35&&Math.abs(q.y-e.y)<30){e.hp--;q.y=-99;if(e.hp<=0){e.dead=true;score+=130}}}));
-   enemies=enemies.filter(e=>!e.dead);enemies.forEach(e=>e.x+=Math.sin(time/20+e.y)*.8);
+   enemies.forEach(e=>shots.forEach(q=>{if(Math.abs(q.x-e.x)<35&&Math.abs(q.y-e.y)<30){e.hp--;q.y=-99;if(e.hp<=0){e.dead=true;score+=130;bossHp=Math.max(0,bossHp-.35)}}}));
+   enemies=enemies.filter(e=>!e.dead);enemies.forEach(e=>{e.x+=Math.sin(time/20+e.y)*.8;e.y+=Math.sin(time/18+e.x)*.15});
    x.fillStyle='#ff5266';enemies.forEach(e=>x.fillRect(e.x-24,e.y-18,48,36));x.fillStyle='#22d3ee';x.beginPath();x.moveTo(player,365);x.lineTo(player-22,415);x.lineTo(player+22,415);x.fill();x.fillStyle='#ffd166';shots.forEach(q=>x.fillRect(q.x-2,q.y,4,12));
-   if(!enemies.length){done=true;premiumFinish(g.id,p,Math.min(1000,score+250),true);return}
-   if(time>900){done=true;info.textContent='👾 A formação resistiu. Tente novamente.';gameSound('fail');return}
+   if(time%110===0)hitPlayer();if(enemies.length<Math.ceil((7+(p===100?3:0))/2))phase=2;if(enemies.length<=2)phase=3;
   }
-  s.textContent=Math.min(1000,score)+' pts';info.textContent='👹 '+boss.name+' • '+(boss.type==='space'||boss.type==='final'?'Espaço atira • ':'')+'tempo '+Math.floor(time/10)+'s';requestAnimationFrame(loop);
+  if(bossHp<=0||(!enemies.length&&(boss.type==='space'||boss.type==='final'))){done=true;score=Math.min(1000,Math.max(850,score+300));gameSound('win');premiumFinish(g.id,p,score,true);bossVictory(g,p,boss,score);return}
+  if((boss.type==='race'&&time>600)||(boss.type==='precision'&&time>750)||(boss.type==='collect'&&time>600)||(boss.type!=='race'&&boss.type!=='precision'&&boss.type!=='collect'&&time>1100)){done=true;info.innerHTML='<b>💥 DERROTA</b><br>O tempo acabou. Tente novamente.';gameSound('fail');return}
+  drawHud();s.textContent=Math.min(1000,score)+' pts • ⏱️ '+Math.floor(time/10)+'s';requestAnimationFrame(loop);
  }
- info.textContent='👹 '+boss.name+' • Prepare-se!';setTimeout(loop,500);
+ drawHud();info.innerHTML='<b>👹 '+boss.name+'</b><br>Derrote o chefe em 3 etapas! • Setas/WASD para mover • Espaço para ação';setTimeout(loop,600);
 }
 
-// ===== JOGOS PREMIUM: GAMEPLAY PRÓPRIO =====
-const PREMIUM_GAMES=new Set(['superplumber','kartrush','citydriver','spacebattle','masterchef','flightacademy','speedrace']);
-const premiumLaunch=launch;
-function premiumCanvas(title,sub){area.innerHTML='<div class="game-wrap premium-game"><div class="premium-top"><div><span class="eyebrow">MODO CAMPANHA</span><h3>'+title+'</h3><p>'+sub+'</p></div><div id="premiumScore" class="score">0</div></div><canvas id="premiumCanvas" width="820" height="460"></canvas><div id="premiumInfo" class="controls">Setas / WASD • Espaço • toque</div><div id="premiumActions"></div></div>';return[document.querySelector('#premiumCanvas'),document.querySelector('#premiumScore'),document.querySelector('#premiumInfo')]}
-
-function premiumFinish(id,phase,score,win=true){
- if(!win)return;
- const stars=score>=850?3:score>=600?2:1;
- saveProgress(id,Math.min(100,phase+1));addRPGReward(id,phase,stars);
- document.querySelector('#premiumInfo').innerHTML='🏆 Fase concluída • '+('⭐'.repeat(stars))+' • '+score+' pontos • Próxima fase '+Math.min(100,phase+1);
- gameSound('win');
- const b=document.createElement('button');b.className='primary';b.textContent=phase>=100?'🏆 CAMPANHA COMPLETA':'PRÓXIMA FASE ▶';b.onclick=()=>launch(id);document.querySelector('#premiumActions').appendChild(b);
-}
-function premiumGameCore(g,phase){
- const id=g.id;
- if(id==='superplumber')return premiumPlumber(g,phase);
- if(id==='kartrush'||id==='speedrace')return premiumRace(g,phase);
- if(id==='citydriver')return premiumCity(g,phase);
- if(id==='spacebattle')return premiumSpace(g,phase);
- if(id==='masterchef')return premiumChef(g,phase);
- if(id==='flightacademy')return premiumFlight(g,phase);
-}
-function premiumGame(id){
- const g=games.find(x=>x.id===id),phase=getProgress(id);
- if(BOSS_EVENTS[phase])return launchBossOrPremium(g,phase);
- showSpecialIntro(phase);
- return premiumGameCore(g,phase);
-}
 function premiumPlumber(g,p){
  const[c,s,info]=premiumCanvas(g.name,'Aventura de plataforma • Fase '+p);const x=c.getContext('2d');let px=70,py=360,vx=0,vy=0,coins=0,score=0,k={},done=false;
  const world=()=>{x.fillStyle='#79c7ff';x.fillRect(0,0,820,460);x.fillStyle='#62b84b';x.fillRect(0,405,820,55);x.fillStyle='#8b5a2b';x.fillRect(0,425,820,35);for(let i=0;i<7;i++){let bx=120+i*105-(p*17%70),by=330-(i%3)*65;x.fillStyle='#8d6b45';x.fillRect(bx,by,75,16);x.fillStyle='#ffd84d';x.beginPath();x.arc(bx+38,by-18,9,0,7);x.fill()}x.fillStyle='#e64b4b';x.fillRect(px,py,30,40);x.fillStyle='#27364d';x.fillRect(px+6,py+28,18,12)};
