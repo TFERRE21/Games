@@ -47,7 +47,7 @@ document.querySelectorAll('.navbtn').forEach(b=>b.onclick=()=>{document.querySel
 document.querySelector('#search').oninput=e=>render(document.querySelector('.navbtn.active').dataset.filter,e.target.value);
 function closeGame(){modal.classList.add('hidden');area.innerHTML=''}
 document.querySelector('#close').onclick=closeGame;modal.onclick=e=>{if(e.target===modal)closeGame()};
-function launch(id){const g=games.find(x=>x.id===id);document.querySelector('#gameCategory').textContent=g.cat.toUpperCase();document.querySelector('#gameTitle').textContent=g.name;modal.classList.remove('hidden');({platformer,snake,blocks,racer,memory,clicker,pong,breakout,flappy,tictactoe,mines,math,whack,typing,car:simCar,flight:simFlight,bus,truck,farm,parking,train,fishing,space,superplumber:platformer,kartrush:racer,citydriver:racer,spacebattle,goalkeeper,princessdress:colorGame,fashionstudio:colorGame,petcare:petGame,colorfun:colorGame,coloranimals:colorGame,colorcars:colorGame,masterchef:chefGame,pizzamaker:chefGame,bakery:chefGame,flightacademy:simFlight,airport:flightGame,speedrace:racer,motorcycle:racer}[id]||clicker)()}
+function launch(id){const g=games.find(x=>x.id===id)||games[0];document.querySelector('#gameCategory').textContent=g.cat.toUpperCase();document.querySelector('#gameTitle').textContent=g.name;modal.classList.remove('hidden');campaignGame(id)}
 function canvasGame(h=420){area.innerHTML=`<div class="game-wrap"><canvas id="game" width="760" height="${h}"></canvas><div id="score" class="score"></div><div class="controls">Teclado: setas / espaço • Clique e toque também funcionam quando indicado.</div></div>`;return[document.querySelector('#game'),document.querySelector('#score')]}
 function platformer(){const[c,s]=canvasGame(400),x=c.getContext('2d');let p={x:70,y:300,vx:0,vy:0},obs=[],score=0,over=false,k={};for(let i=0;i<8;i++)obs.push({x:220+i*110,y:250+Math.random()*80,w:70,h:18});const kd=e=>k[e.key]=1,ku=e=>k[e.key]=0;addEventListener('keydown',kd);addEventListener('keyup',ku);function loop(){x.fillStyle='#101b30';x.fillRect(0,0,c.width,c.height);x.fillStyle='#18d6a0';x.fillRect(0,350,c.width,50);x.fillStyle='#6d5dfc';x.fillRect(p.x,p.y,28,36);if(k.ArrowLeft)p.vx=-4;if(k.ArrowRight)p.vx=4;if((k[' ']||k.ArrowUp)&&p.y>=314)p.vy=-10;p.vy+=.5;p.x+=p.vx;p.y+=p.vy;if(p.x<0)p.x=0;if(p.x>730)p.x=730;if(p.y>314){p.y=314;p.vy=0}obs.forEach(o=>{o.x-=2;if(o.x<-90){o.x=800;score++;o.y=250+Math.random()*80}x.fillStyle='#f59e0b';x.fillRect(o.x,o.y,o.w,o.h);if(p.x<o.x+o.w&&p.x+28>o.x&&p.y+36>o.y&&p.y<o.y+o.h)over=true});s.textContent=over?'💥 Fim de jogo':'Pontos: '+score;if(!over)requestAnimationFrame(loop)}loop()}
 function snake(){const[c,s]=canvasGame(420),x=c.getContext('2d'),N=21,sz=20;let a=[{x:10,y:10}],d={x:1,y:0},food={x:5,y:5},over=false,sc=0;const key=e=>{if(e.key==='ArrowUp'&&d.y===0)d={x:0,y:-1};if(e.key==='ArrowDown'&&d.y===0)d={x:0,y:1};if(e.key==='ArrowLeft'&&d.x===0)d={x:-1,y:0};if(e.key==='ArrowRight'&&d.x===0)d={x:1,y:0}};addEventListener('keydown',key);function loop(){let h={x:a[0].x+d.x,y:a[0].y+d.y};if(h.x<0||h.y<0||h.x>=N||h.y>=N||a.some(q=>q.x===h.x&&q.y===h.y))over=true;a.unshift(h);if(h.x===food.x&&h.y===food.y){sc++;food={x:Math.floor(Math.random()*N),y:Math.floor(Math.random()*N)}}else a.pop();x.fillStyle='#08101b';x.fillRect(0,0,c.width,c.height);x.fillStyle='#18d6a0';a.forEach(q=>x.fillRect(q.x*sz,q.y*sz,sz-2,sz-2));x.fillStyle='#ff4d6d';x.fillRect(food.x*sz,food.y*sz,sz-2,sz-2);s.textContent=over?'💥 Fim de jogo':'Pontos: '+sc;if(!over)setTimeout(()=>requestAnimationFrame(loop),105)}loop()}
@@ -181,3 +181,100 @@ function chefGame(){area.innerHTML='<div class="game-wrap"><h3>👨‍🍳 Desaf
 function flightGame(){area.innerHTML='<div class="game-wrap"><h3>🛫 Aeroporto</h3><p>Controle o tráfego e mantenha os aviões separados.</p><div style="font-size:90px">🛩️ ↔️ 🛫</div><input id="traffic" type="range" min="0" max="100" value="50"><div id="flightScore" class="score">Tráfego: 50%</div></div>';traffic.oninput=()=>flightScore.textContent='Tráfego: '+traffic.value+'% — '+(traffic.value<70?'Operação segura':'Atenção ao tráfego!')}
 
 function heroGameCard(id,title,icon,text){return '<article class="featured-game" data-launch="'+id+'"><div class="featured-icon">'+icon+'</div><div><span class="eyebrow">DESTAQUE</span><h3>'+title+'</h3><p>'+text+'</p><button class="primary">JOGAR</button></div></article>'}
+
+// ===== CAMPANHA DE 100 FASES =====
+const CAMPAIGN_KEY='games_campaign_v1';
+const campaignState=JSON.parse(localStorage.getItem(CAMPAIGN_KEY)||'{}');
+function getProgress(id){return Math.max(1,Math.min(100,Number(campaignState[id]||1)))}
+function saveProgress(id,level){campaignState[id]=Math.min(100,Math.max(1,level));localStorage.setItem(CAMPAIGN_KEY,JSON.stringify(campaignState))}
+function campaignTheme(g){
+  if(g.cat==='girls')return ['👗','Desafio de Estilo'];
+  if(g.cat==='coloring')return ['🎨','Desafio de Cores'];
+  if(g.cat==='cooking')return ['👨‍🍳','Desafio de Cozinha'];
+  if(g.cat==='flight')return ['✈️','Missão de Voo'];
+  if(g.cat==='racing')return ['🏁','Desafio de Corrida'];
+  if(g.cat==='sim')return [g.icon,'Missão de Simulação'];
+  if(g.cat==='puzzle')return ['🧩','Desafio Mental'];
+  if(g.cat==='sports')return ['🏆','Desafio Esportivo'];
+  return ['🎮','Desafio Arcade'];
+}
+function campaignGame(id){
+  const g=games.find(x=>x.id===id)||games[0], level=getProgress(id), [emoji,kind]=campaignTheme(g);
+  area.innerHTML=`<div class="game-wrap campaign-wrap">
+    <div class="campaign-head">
+      <div><span class="eyebrow">CAMPANHA</span><h3>${emoji} ${g.name}</h3><p>${kind} • 100 fases</p></div>
+      <div class="campaign-level">FASE <b id="campaignLevel">${level}</b>/100</div>
+    </div>
+    <div class="campaign-progress"><span id="campaignBar" style="width:${level}%"></span></div>
+    <div class="campaign-body">
+      <div class="campaign-icon">${g.icon}</div>
+      <h3 id="campaignTitle">Fase ${level} — ${campaignMission(id,level)}</h3>
+      <p id="campaignDesc">Complete o desafio para liberar a próxima fase. A dificuldade aumenta a cada etapa.</p>
+      <div id="campaignChallenge"></div>
+      <div class="campaign-actions">
+        <button class="primary" id="campaignCheck">CONCLUIR FASE</button>
+        <button class="primary" id="campaignNext" disabled>PRÓXIMA FASE ▶</button>
+      </div>
+      <div id="campaignScore" class="score">Progresso: ${level-1}/100 fases concluídas</div>
+    </div>
+  </div>`;
+  buildCampaignChallenge(id,level);
+}
+function campaignMission(id,l){
+  const g=games.find(x=>x.id===id);
+  if(g?.cat==='cooking')return 'prepare os ingredientes certos';
+  if(g?.cat==='flight')return 'controle altitude e rota';
+  if(g?.cat==='racing')return 'supere o tempo-alvo';
+  if(g?.cat==='coloring')return 'complete a pintura';
+  if(g?.cat==='girls')return 'monte a combinação pedida';
+  if(g?.cat==='puzzle')return 'resolva o desafio';
+  if(g?.cat==='sports')return 'alcance a pontuação mínima';
+  return 'complete o objetivo da missão';
+}
+function buildCampaignChallenge(id,l){
+  const box=document.querySelector('#campaignChallenge'),g=games.find(x=>x.id===id)||games[0];
+  const target=5+Math.floor(l*1.5);
+  if(g.cat==='cooking'){
+    const ingredients=['🍅','🧀','🍞','🍫','🥕','🍓','🥚','🥩'], need=[ingredients[l%8],ingredients[(l+2)%8],ingredients[(l+4)%8]];
+    box.innerHTML='<p>Escolha exatamente: <b>'+need.join(' ')+'</b></p><div class="campaign-options">'+ingredients.map(x=>'<button data-v="'+x+'">'+x+'</button>').join('')+'</div>';
+    box.querySelectorAll('button').forEach(b=>b.onclick=()=>b.classList.toggle('selected'));
+  }else if(g.cat==='coloring'||g.cat==='girls'){
+    box.innerHTML='<p>Complete <b>'+Math.min(10,3+Math.floor(l/10))+'</b> escolhas de estilo/cores.</p><div class="campaign-options">'+['❤️','💙','💚','💜','💛','🩷','🖤','🤍'].map(x=>'<button data-v="'+x+'">'+x+'</button>').join('')+'</div><div id="choiceCount">0 escolhas</div>';
+    let n=0;box.querySelectorAll('button').forEach(b=>b.onclick=()=>{n++;document.querySelector('#choiceCount').textContent=n+' escolhas'});
+  }else if(g.cat==='flight'||g.cat==='sim'){
+    box.innerHTML='<p>Regule os controles até atingir a faixa da missão.</p><input id="missionControl" type="range" min="0" max="100" value="'+(30+(l*7)%61)+'"><div class="score">Controle: <b id="missionValue">'+document.querySelector('#missionControl')?.value+'</b>%</div>';
+    box.querySelector('#missionControl').oninput=e=>document.querySelector('#missionValue').textContent=e.target.value;
+  }else if(g.cat==='racing'){
+    box.innerHTML='<p>Tempo-alvo: <b>'+Math.max(8,35-Math.floor(l/4))+'s</b></p><button class="primary" id="raceStart">🏎️ INICIAR CORRIDA</button><div id="raceTimer" class="score">Pronto</div>';
+    let t=null,start=0;box.querySelector('#raceStart').onclick=()=>{if(t)return;start=Date.now();t=setInterval(()=>{let s=((Date.now()-start)/1000).toFixed(1);document.querySelector('#raceTimer').textContent=s+'s';if(+s>=Math.max(8,35-Math.floor(l/4))){clearInterval(t);t=null}},100)};
+  }else if(g.cat==='puzzle'){
+    const a=2+(l%12),b=3+((l*3)%17),ans=a+b;
+    box.innerHTML='<p>Quanto é <b>'+a+' + '+b+'?</b></p><input id="missionAnswer" type="number" placeholder="Resposta">';
+    box.dataset.answer=ans;
+  }else{
+    box.innerHTML='<p>Alvo da fase: <b>'+target+'</b> pontos/ações.</p><button class="primary" id="missionTap">🎯 FAZER AÇÃO</button><div id="tapCount" class="score">0 / '+target+'</div>';
+    let n=0;box.querySelector('#missionTap').onclick=()=>{n++;document.querySelector('#tapCount').textContent=n+' / '+target};
+    box.dataset.target=target;
+  }
+  document.querySelector('#campaignCheck').onclick=()=>completeCampaignPhase(id,l);
+}
+function completeCampaignPhase(id,l){
+  const g=games.find(x=>x.id===id)||games[0], box=document.querySelector('#campaignChallenge');
+  let ok=true;
+  if(g.cat==='puzzle')ok=Number(box.querySelector('#missionAnswer')?.value)===Number(box.dataset.answer);
+  else if(g.cat==='cooking')ok=box.querySelectorAll('.selected').length===3;
+  else if(g.cat==='coloring'||g.cat==='girls')ok=(Number(box.querySelector('#choiceCount')?.textContent)||0)>=Math.min(10,3+Math.floor(l/10));
+  else if(g.cat==='racing')ok=true;
+  else if(g.cat==='flight'||g.cat==='sim')ok=Number(box.querySelector('#missionControl')?.value)>=30&&Number(box.querySelector('#missionControl')?.value)<=80;
+  else ok=(Number(box.querySelector('#tapCount')?.textContent?.split('/')[0])||0)>=Number(box.dataset.target||1);
+  if(!ok){document.querySelector('#campaignScore').textContent='❌ Ainda não. Complete o objetivo da fase e tente novamente.';return}
+  const next=Math.min(100,l+1);saveProgress(id,next);
+  document.querySelector('#campaignScore').textContent=l===100?'🏆 CAMPANHA COMPLETA! Você terminou as 100 fases.':'✅ Fase '+l+' concluída! Fase '+next+' liberada.';
+  document.querySelector('#campaignCheck').disabled=true;
+  const nb=document.querySelector('#campaignNext');nb.disabled=false;
+  nb.onclick=()=>campaignGame(id);
+  document.querySelector('#campaignBar').style.width=l+'%';
+}
+
+(function injectCampaignStyle(){if(document.querySelector('#campaignStyle'))return;const s=document.createElement('style');s.id='campaignStyle';s.textContent=`
+.campaign-wrap{max-width:900px;margin:auto}.campaign-head{display:flex;justify-content:space-between;gap:20px;align-items:center}.campaign-level{font-size:20px;padding:12px 16px;border:1px solid #33405a;border-radius:12px}.campaign-progress{height:12px;background:#182338;border-radius:20px;overflow:hidden;margin:14px 0 24px}.campaign-progress span{display:block;height:100%;background:#18d6a0;transition:width .3s}.campaign-body{text-align:center;padding:18px}.campaign-icon{font-size:90px}.campaign-options{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:18px}.campaign-options button{font-size:34px;padding:10px 15px;background:#151f31;color:white;border:1px solid #33405a;border-radius:12px;cursor:pointer}.campaign-options button.selected{outline:3px solid #18d6a0;transform:scale(1.06)}.campaign-actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:22px}.campaign-actions button:disabled{opacity:.45;cursor:not-allowed}`;document.head.appendChild(s)})();
