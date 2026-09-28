@@ -105,7 +105,7 @@ function showGames(list,title){document.querySelector('#viewTitle').classList.re
 function addRecent(id){state.recent=[id,...state.recent.filter(x=>x!==id)].slice(0,12);saveState()}
 function openPanel(id){document.querySelectorAll('.feature-panel').forEach(x=>x.classList.add('hidden'));document.querySelector(id).classList.remove('hidden');document.querySelector(id).scrollIntoView({behavior:'smooth'})}
 document.querySelector('#navProfile').onclick=()=>openPanel('#loginPanel');
-document.querySelector('#loginBtn').onclick=()=>{const n=document.querySelector('#loginName').value.trim();if(n){state.user=n;saveState();document.querySelector('#loginPanel').classList.add('hidden')}};
+
 document.querySelector('#showRecent').onclick=()=>showGames(state.recent.map(id=>games.find(g=>g.id===id)).filter(Boolean),'🕘 Jogos recentes');
 document.querySelector('#showFavorites').onclick=()=>showGames(state.favorites.map(id=>games.find(g=>g.id===id)).filter(Boolean),'❤️ Meus favoritos');
 document.querySelector('#showRanking').onclick=()=>{const rows=Object.entries(state.records).sort((a,b)=>b[1]-a[1]).slice(0,20);document.querySelector('#rankingList').innerHTML=rows.length?rows.map((r,i)=>`<div class="rank-row"><div class="rank-pos">#${i+1}</div><div class="rank-name">${(games.find(g=>g.id===r[0])||{name:r[0]}).name}</div><div class="rank-score">${r[1]} pts</div></div>`).join(''):'<p class="panel-note">Jogue para criar seus primeiros recordes.</p>';openPanel('#rankingPanel')};
@@ -129,16 +129,38 @@ let authMode='login';
 async function api(path,options={}){const headers={'Content-Type':'application/json',...(options.headers||{})};if(apiToken)headers.Authorization='Bearer '+apiToken;const res=await fetch(API+path,{...options,headers});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||'Erro de comunicação');return data}
 function setApiSession(data){apiToken=data.token;apiUser=data.user;localStorage.setItem('games_api_token',apiToken);localStorage.setItem('games_api_user',JSON.stringify(apiUser));state.user=apiUser.name;saveState();document.querySelector('#authMsg').textContent='Login realizado com sucesso!'}
 function authMessage(t){const e=document.querySelector('#authMsg');if(e)e.textContent=t}
-function setAuthMode(mode){authMode=mode;document.querySelector('#tabLogin')?.classList.toggle('active',mode==='login');document.querySelector('#tabRegister')?.classList.toggle('active',mode==='register');document.querySelector('#loginName').style.display=mode==='register'?'block':'none';document.querySelector('#loginBtn').textContent=mode==='register'?'Criar conta':'Entrar no Games'}
+function setAuthMode(mode){
+ authMode=mode;
+ const register=mode==='register';
+ document.querySelector('#tabLogin')?.classList.toggle('active',!register);
+ document.querySelector('#tabRegister')?.classList.toggle('active',register);
+ document.querySelector('#registerFields')?.classList.toggle('hidden',!register);
+ document.querySelector('#confirmPasswordWrap')?.classList.toggle('hidden',!register);
+ document.querySelector('#authTitle').textContent=register?'Criar sua conta':'Entrar no Games';
+ document.querySelector('#loginBtn').textContent=register?'🚀 Criar conta grátis':'🔐 Entrar no Games';
+ document.querySelector('#loginPassword').autocomplete=register?'new-password':'current-password';
+ if(register)document.querySelector('#loginName')?.focus();
+}
 document.querySelector('#tabLogin')?.addEventListener('click',()=>setAuthMode('login'));
 document.querySelector('#tabRegister')?.addEventListener('click',()=>setAuthMode('register'));
 document.querySelector('#loginBtn')?.addEventListener('click',async()=>{
- const name=document.querySelector('#loginName').value.trim(),email=document.querySelector('#loginEmail').value.trim(),password=document.querySelector('#loginPassword').value;
+ const name=document.querySelector('#loginName')?.value.trim(),email=document.querySelector('#loginEmail').value.trim(),password=document.querySelector('#loginPassword').value;
+ const confirm=document.querySelector('#loginPasswordConfirm')?.value||'';
+ if(authMode==='register'){
+  if(!name)return authMessage('Digite seu nome ou apelido.');
+  if(name.length<2)return authMessage('O nome precisa ter pelo menos 2 caracteres.');
+  if(!email)return authMessage('Digite seu e-mail.');
+  if(password.length<6)return authMessage('A senha precisa ter pelo menos 6 caracteres.');
+  if(password!==confirm)return authMessage('As senhas não conferem.');
+ }
+ if(authMode==='login'&&(!email||!password))return authMessage('Informe e-mail e senha.');
+ const btn=document.querySelector('#loginBtn');btn.disabled=true;btn.textContent=authMode==='register'?'Criando sua conta...':'Entrando...';
  try{
   const data=await api(authMode==='register'?'/api/register':'/api/login',{method:'POST',body:JSON.stringify(authMode==='register'?{name,email,password}:{email,password})});
-  setApiSession(data);document.querySelector('#loginPanel').classList.add('hidden');
+  setApiSession(data);document.querySelector('#loginPanel').classList.add('hidden');btn.disabled=false;
   if(apiUser.role==='admin')showAdmin();
- }catch(e){authMessage(e.message)}
+  syncRPG();
+ }catch(e){btn.disabled=false;setAuthMode(authMode);authMessage(e.message)}
 });
 async function syncFavoritesFromApi(){
  if(!apiToken)return;
