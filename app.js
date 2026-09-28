@@ -300,8 +300,8 @@ rpg.xp=Number.isFinite(rpg.xp)?rpg.xp:0;
 rpg.level=Number.isFinite(rpg.level)?rpg.level:1;
 rpg.stars=rpg.stars||{};
 rpg.worlds=rpg.worlds||{};
-rpg.phaseScores=rpg.phaseScores||{};
-function saveRPG(){localStorage.setItem(RPG_KEY,JSON.stringify(rpg));updateRPGHud()}
+rpg.phaseScores=rpg.phaseScores||{};\nrpg.nextLifeAt=Number(rpg.nextLifeAt)||0;
+function saveRPG(){localStorage.setItem(RPG_KEY,JSON.stringify(rpg));updateRPGHud()}\nfunction recoverLives(){if(rpg.lives>=5||!rpg.nextLifeAt)return;const now=Date.now();while(rpg.lives<5&&rpg.nextLifeAt&&now>=rpg.nextLifeAt){rpg.lives++;rpg.nextLifeAt=rpg.lives<5?now+60000:0}saveRPG()}\nfunction gameSound(type){try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return;const a=gameSound.ctx||(gameSound.ctx=new A()),o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=type==='win'?720:type==='fail'?150:420;g.gain.setValueAtTime(.0001,a.currentTime);g.gain.exponentialRampToValueAtTime(.08,a.currentTime+.01);g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+.16);o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+.18)}catch(e){}}
 function xpForLevel(l){return 100+(l-1)*50}
 function recalcLevel(){while(rpg.xp>=xpForLevel(rpg.level)){rpg.xp-=xpForLevel(rpg.level);rpg.level++}}
 function addRPGReward(id,phase,stars){
@@ -312,8 +312,8 @@ function addRPGReward(id,phase,stars){
   recalcLevel(); saveRPG();
   if(apiToken)api('/api/scores',{method:'POST',body:JSON.stringify({gameId:id+'-phase-'+phase,score:stars*100+phase})}).catch(()=>{});
 }
-function loseLife(){if(rpg.lives<=0)return false;rpg.lives--;saveRPG();return true}
-function restoreLife(){rpg.lives=Math.min(5,rpg.lives+1);saveRPG()}
+function loseLife(){recoverLives();if(rpg.lives<=0)return false;rpg.lives--;if(!rpg.nextLifeAt)rpg.nextLifeAt=Date.now()+60000;saveRPG();gameSound('fail');return true}
+function restoreLife(){rpg.lives=Math.min(5,rpg.lives+1);rpg.nextLifeAt=rpg.lives<5?Date.now()+60000:0;saveRPG();gameSound('bonus')}
 function updateRPGHud(){
   const el=document.querySelector('#rpgHud');if(!el)return;
   const need=xpForLevel(rpg.level);
