@@ -82,6 +82,11 @@ if(adminEmail&&adminPassword){
 app.use(cors({origin:process.env.CORS_ORIGIN||'*'}));
 app.use(express.json({limit:'100kb'}));
 
+// No iContainer, o mesmo processo Node serve a interface web e a API.
+// Assim o portal inteiro funciona em uma única aplicação/origem.
+app.use(express.static(path.join(__dirname,'..')));
+
+
 function token(user){return jwt.sign({id:user.id,email:user.email,role:user.role},JWT_SECRET,{expiresIn:'7d'})}
 function auth(req,res,next){
  try{const h=req.headers.authorization||'';if(!h.startsWith('Bearer '))throw 0;req.user=jwt.verify(h.slice(7),JWT_SECRET);next()}
