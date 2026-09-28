@@ -553,19 +553,38 @@ document.querySelector('#showProfile')?.addEventListener('click',()=>{openPanel(
 
 // ===== MULTIPLAYER E SINCRONIZACAO =====
 let currentRoom='';
+let rpgSyncBusy=false;
 async function syncRPG(){
- if(!apiToken)return;
+ if(!apiToken||rpgSyncBusy)return;
+ rpgSyncBusy=true;
  try{
   const d=await api('/api/progress');
-  if(d.player){Object.assign(rpg,d.player);saveRPG()}
-  (d.phases||[]).forEach(p=>{const k=p.game_id+':'+p.phase;rpg.stars[k]=Math.max(rpg.stars[k]||0,p.stars||0);});
+  const p=d.player||{lives:5,coins:0,xp:0,level:1,next_life_at:0};
+  const serverHasProgress=Number(p.coins)>0||Number(p.xp)>0||Number(p.level)>1||(d.phases||[]).length>0;
+  const localHasProgress=rpg.coins>0||rpg.xp>0||rpg.level>1||Object.keys(rpg.stars||{}).length>0;
+  if(!serverHasProgress&&localHasProgress){await persistRPGState();return}
+  rpg.lives=Math.max(0,Math.min(5,Number(p.lives)||5));
+  rpg.coins=Math.max(0,Number(p.coins)||0);
+  rpg.xp=Math.max(0,Number(p.xp)||0);
+  rpg.level=Math.max(1,Number(p.level)||1);
+  rpg.nextLifeAt=Number(p.next_life_at)||0;
+  (d.phases||[]).forEach(q=>{const k=q.game_id+':'+q.phase;rpg.stars[k]=Math.max(rpg.stars[k]||0,Number(q.stars)||0);rpg.phaseScores[k]=Math.max(rpg.phaseScores[k]||0,Number(q.score)||0)});
   saveRPG();refreshAchievements();
- }catch(e){}
+ }catch(e){}finally{rpgSyncBusy=false}
+}
+async function persistRPGState(){
+ if(!apiToken||rpgSyncBusy)return;
+ try{
+  rpgSyncBusy=true;
+  await api('/api/progress',{method:'POST',body:JSON.stringify({player:{lives:rpg.lives,coins:rpg.coins,xp:rpg.xp,level:rpg.level,nextLifeAt:rpg.nextLifeAt||0}})});
+ }catch(e){}finally{rpgSyncBusy=false}
 }
 async function persistRPGPhase(id,phase,stars,score=0){
  if(!apiToken)return;
- try{await api('/api/progress',{method:'POST',body:JSON.stringify({player:{lives:rpg.lives,coins:rpg.coins,xp:rpg.xp,level:rpg.level},phase:{gameId:id,phase,stars,score}})})}catch(e){}
+ try{await api('/api/progress',{method:'POST',body:JSON.stringify({player:{lives:rpg.lives,coins:rpg.coins,xp:rpg.xp,level:rpg.level,nextLifeAt:rpg.nextLifeAt||0},phase:{gameId:id,phase,stars,score}})})}catch(e){}
 }
+setInterval(()=>{if(apiToken)persistRPGState()},30000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&apiToken)persistRPGState()});
 const prevReward=addRPGReward;
 addRPGReward=function(id,phase,stars){prevReward(id,phase,stars);persistRPGPhase(id,phase,stars,stars*100+phase)};
 document.querySelector('#createRoom')?.addEventListener('click',async()=>{
