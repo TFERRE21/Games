@@ -592,7 +592,7 @@ function premiumPlumber(g,p){
  draw();loop();
 }
 function premiumRace(g,p){
- const[c,s,info]=premiumCanvas(g.name,'Circuito longo • Fase '+p+' • câmera acompanha',);const x=c.getContext('2d');
+ const[c,s,info]=premiumCanvas(g.name,'Circuito longo • Fase '+p+' • câmera acompanha',);const x=c.getContext('2d');const W=820,H=460;
  const worldW=5200+p*18;let carX=260,carY=350,vy=0,cam=0,dist=0,score=0,lives=3,done=false,k={};
  const obstacles=[];for(let i=0;i<18+Math.floor(p/5);i++)obstacles.push({x:500+i*250+(p*31%90),y:290-(i%3)*20,w:42,h:68,lane:i%3,hit:false});
  const key=e=>{k[e.key]=1;if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(e.key))e.preventDefault()},up=e=>k[e.key]=0;addEventListener('keydown',key);addEventListener('keyup',up);
@@ -615,7 +615,7 @@ function premiumRace(g,p){
  }loop();
 }
 function premiumCity(g,p){
- const[c,s,info]=premiumCanvas(g.name,'Cidade aberta • Fase '+p+' • câmera livre',);const x=c.getContext('2d');
+ const[c,s,info]=premiumCanvas(g.name,'Cidade aberta • Fase '+p+' • câmera livre',);const x=c.getContext('2d');const W=820,H=460;
  const worldW=4200+p*15,worldH=900;let car={x:120,y:420,w:38,h:58},camX=0,camY=180,fuel=100,score=0,done=false,k={};
  const targets=[...Array(6)].map((_,i)=>({x:500+i*570+(p*37%120),y:120+(i%3)*230,done:false}));
  const traffic=[...Array(14)].map((_,i)=>({x:300+i*280,y:100+(i%4)*180,v:i%2?1.2:-1.2}));
@@ -637,7 +637,7 @@ function premiumCity(g,p){
  }loop();
 }
 function premiumSpace(g,p){
- const[c,s,info]=premiumCanvas(g.name,'Arena espacial • Fase '+p+' • ondas de inimigos',);const x=c.getContext('2d');
+ const[c,s,info]=premiumCanvas(g.name,'Arena espacial • Fase '+p+' • ondas de inimigos',);const x=c.getContext('2d');const W=820,H=460;
  let ship={x:410,y:390,w:28,h:34},shots=[],enemies=[],score=0,wave=1,done=false,k={},cool=0;
  const total=6+Math.min(18,Math.floor(p/4));for(let i=0;i<total;i++)enemies.push({x:70+(i%9)*90,y:60+Math.floor(i/9)*65,hp:1+(p>35?1:0),vx:i%2?1:-1,alive:true});
  const key=e=>{k[e.key]=1;if(e.key===' ')e.preventDefault()},up=e=>k[e.key]=0;addEventListener('keydown',key);addEventListener('keyup',up);
