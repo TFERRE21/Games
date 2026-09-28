@@ -137,14 +137,60 @@ app.get('/api/progress',auth,(req,res)=>{
  res.json({player:p,phases});
 });
 app.post('/api/progress',auth,(req,res)=>{
- const p=req.body.player||{};const nextLifeAt=Math.max(0,Math.floor(Number(p.nextLifeAt)||0));const lives=Math.max(0,Math.min(5,Math.floor(Number(p.lives)||0))),coins=Math.max(0,Math.min(100000000,Math.floor(Number(p.coins)||0))),xp=Math.max(0,Math.min(100000000,Math.floor(Number(p.xp)||0))),level=Math.max(1,Math.min(10000,Math.floor(Number(p.level)||1)));
- db.prepare('INSERT INTO player_progress(user_id,lives,coins,xp,level,next_life_at,updated_at) VALUES(?,?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(user_id) DO UPDATE SET lives=excluded.lives,coins=excluded.coins,xp=excluded.xp,level=excluded.level,next_life_at=excluded.next_life_at,updated_at=CURRENT_TIMESTAMP').run(req.user.id,lives,coins,xp,level,nextLifeAt);
+ // Este endpoint não aceita mais moedas/XP/vidas vindos do navegador.
+ // O servidor é a fonte de verdade da economia; ações passam pelas rotas /api/rpg/*.
  const phase=req.body.phase;
  if(phase&&phase.gameId){
   const gameId=String(phase.gameId).slice(0,80),ph=Math.max(1,Math.min(1000,Math.floor(Number(phase.phase)||1))),stars=Math.max(0,Math.min(3,Math.floor(Number(phase.stars)||0))),score=Math.max(0,Math.min(100000000,Math.floor(Number(phase.score)||0)));
   db.prepare('INSERT INTO phase_progress(user_id,game_id,phase,stars,score,updated_at) VALUES(?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(user_id,game_id,phase) DO UPDATE SET stars=MAX(stars,excluded.stars),score=MAX(score,excluded.score),updated_at=CURRENT_TIMESTAMP').run(req.user.id,gameId,ph,stars,score);
  }
  res.json({ok:true});
+});
+
+function ensurePlayer(userId){
+ let p=db.prepare('SELECT lives,coins,xp,level,next_life_at FROM player_progress WHERE user_id=?').get(userId);
+ if(!p){db.prepare('INSERT INTO player_progress(user_id) VALUES(?)').run(userId);p=db.prepare('SELECT lives,coins,xp,level,next_life_at FROM player_progress WHERE user_id=?').get(userId)}
+ const now=Date.now();
+ if(p.lives<5&&p.next_life_at>0&&now>=p.next_life_at){
+  const gained=Math.min(5-p.lives,Math.floor((now-p.next_life_at)/60000)+1);
+  p.lives+=gained;
+  p.next_life_at=p.lives<5?now+60000:0;
+  db.prepare('UPDATE player_progress SET lives=?,next_life_at=?,updated_at=CURRENT_TIMESTAMP WHERE user_id=?').run(p.lives,p.next_life_at,userId);
+ }
+ return p;
+}
+app.post('/api/rpg/reward',auth,(req,res)=>{
+ const gameId=String(req.body.gameId||'').slice(0,80),phase=Math.max(1,Math.min(1000,Math.floor(Number(req.body.phase)||1))),stars=Math.max(1,Math.min(3,Math.floor(Number(req.body.stars)||1))),score=Math.max(0,Math.min(100000000,Math.floor(Number(req.body.score)||0)));
+ if(!gameId)return res.status(400).json({error:'gameId obrigatório'});
+ const tx=db.transaction(()=>{
+  const p=ensurePlayer(req.user.id);
+  const old=db.prepare('SELECT stars FROM phase_progress WHERE user_id=? AND game_id=? AND phase=?').get(req.user.id,gameId,phase);
+  const oldStars=old?.stars||0;
+  const delta=Math.max(0,stars-oldStars);
+  db.prepare('INSERT INTO phase_progress(user_id,game_id,phase,stars,score,updated_at) VALUES(?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(user_id,game_id,phase) DO UPDATE SET stars=MAX(stars,excluded.stars),score=MAX(score,excluded.score),updated_at=CURRENT_TIMESTAMP').run(req.user.id,gameId,phase,stars,score);
+  if(delta>0){
+   const coins=p.coins+delta*10,xp=p.xp+delta*25,level=Math.max(1,Math.floor(Math.sqrt(xp/100))+1);
+   db.prepare('UPDATE player_progress SET coins=?,xp=?,level=?,updated_at=CURRENT_TIMESTAMP WHERE user_id=?').run(coins,xp,level,req.user.id);
+  }
+  return {delta};
+ });
+ const p=ensurePlayer(req.user.id);res.json({ok:true,awarded:tx.delta,player:p});
+});
+app.post('/api/rpg/life/lose',auth,(req,res)=>{
+ const tx=db.transaction(()=>{const p=ensurePlayer(req.user.id);if(p.lives<=0)return false;p.lives--;if(p.lives<5&&!p.next_life_at)p.next_life_at=Date.now()+60000;db.prepare('UPDATE player_progress SET lives=?,next_life_at=?,updated_at=CURRENT_TIMESTAMP WHERE user_id=?').run(p.lives,p.next_life_at,req.user.id);return true});
+ const p=ensurePlayer(req.user.id);res.json({ok:true,lost:tx,player:p});
+});
+app.post('/api/rpg/daily',auth,(req,res)=>{
+ const today=new Date().toISOString().slice(0,10);
+ const tx=db.transaction(()=>{const row=db.prepare('SELECT data FROM portal_state WHERE user_id=?').get(req.user.id);let d={};try{d=row?JSON.parse(row.data||'{}'):{};}catch(e){};if(d.daily?.date===today&&d.daily?.claimed)return false;const p=ensurePlayer(req.user.id);const xp=p.xp+50,coins=p.coins+100,level=Math.max(1,Math.floor(Math.sqrt(xp/100))+1);db.prepare('UPDATE player_progress SET coins=?,xp=?,level=?,updated_at=CURRENT_TIMESTAMP WHERE user_id=?').run(coins,xp,level,req.user.id);d.daily={date:today,claimed:true};db.prepare('INSERT INTO portal_state(user_id,data,updated_at) VALUES(?,?,CURRENT_TIMESTAMP) ON CONFLICT(user_id) DO UPDATE SET data=excluded.data,updated_at=CURRENT_TIMESTAMP').run(req.user.id,JSON.stringify(d));return true});
+ const p=ensurePlayer(req.user.id);res.json({ok:true,claimed:tx,player:p});
+});
+app.post('/api/rpg/purchase',auth,(req,res)=>{
+ const item=String(req.body.item||'').slice(0,40),cost=Math.max(0,Math.min(100000,Math.floor(Number(req.body.cost)||0)));
+ const allowed={avatar1:200,avatar2:300,theme:500,frame:750,car:400,pet:350,crown:1000,rocket:600};
+ if(!allowed[item]||allowed[item]!==cost)return res.status(400).json({error:'Item inválido'});
+ const tx=db.transaction(()=>{const row=db.prepare('SELECT data FROM portal_state WHERE user_id=?').get(req.user.id);let d={purchases:[]};try{d=row?JSON.parse(row.data||'{}'):d}catch(e){};d.purchases=Array.isArray(d.purchases)?d.purchases:[];if(d.purchases.includes(item))return false;const p=ensurePlayer(req.user.id);if(p.coins<cost)return false;p.coins-=cost;db.prepare('UPDATE player_progress SET coins=?,updated_at=CURRENT_TIMESTAMP WHERE user_id=?').run(p.coins,req.user.id);d.purchases.push(item);db.prepare('INSERT INTO portal_state(user_id,data,updated_at) VALUES(?,?,CURRENT_TIMESTAMP) ON CONFLICT(user_id) DO UPDATE SET data=excluded.data,updated_at=CURRENT_TIMESTAMP').run(req.user.id,JSON.stringify(d));return true});
+ const p=ensurePlayer(req.user.id);res.json({ok:true,purchased:tx,player:p});
 });
 app.get('/api/portal',auth,(req,res)=>{
  const row=db.prepare('SELECT data FROM portal_state WHERE user_id=?').get(req.user.id);
