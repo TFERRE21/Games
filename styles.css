@@ -28,3 +28,20 @@
 .premium-game{padding:18px;background:radial-gradient(circle at 50% 0,#172744,#05080e 65%);border:1px solid #2d4163;box-shadow:0 25px 70px #0008}.premium-game canvas{width:100%;height:auto;border:1px solid #263752;box-shadow:0 12px 35px #0006}.premium-top{display:flex;justify-content:space-between;align-items:center;gap:15px;padding:8px 4px 14px}.premium-top h3{margin:4px 0;font-size:24px}.premium-top p{margin:0;color:var(--muted)}.premium-top .score{font-size:20px;padding:10px 14px;background:#111b2d;border-radius:12px}.premium-game .controls{padding:12px;text-align:center}.chef-choice{font-size:48px;background:#151f31;color:#fff;border:1px solid #33405a;border-radius:14px;padding:10px 18px;margin:6px;cursor:pointer;transition:.15s}.chef-choice:hover,.chef-choice.selected{border-color:var(--accent2);transform:translateY(-3px);box-shadow:0 8px 25px #18d6a033}@media(max-width:600px){.premium-top{align-items:flex-start}.premium-top h3{font-size:18px}.premium-game{padding:9px}.chef-choice{font-size:38px;padding:8px 13px}}
 
 .boss-bar-wrap{margin:6px auto;max-width:520px;text-align:left;font-size:11px}.boss-bar-wrap b{display:block;margin-bottom:3px}.boss-bar{height:9px;background:#101827;border:1px solid #33405a;border-radius:99px;overflow:hidden}.boss-bar span{display:block;height:100%;background:linear-gradient(90deg,#ef476f,#ffd166);transition:width .2s}.boss-phase{display:inline-block;margin:8px 0;padding:6px 12px;border-radius:999px;background:#111b2d;border:1px solid #33405a;font-weight:900}.boss-victory{text-align:center;padding:18px 8px;animation:bossPop .5s ease}.boss-victory-icon{font-size:72px;filter:drop-shadow(0 10px 25px #ffd16655);animation:bossPulse 1.1s infinite}.boss-victory-title{font-size:30px;font-weight:1000;letter-spacing:1px;margin:5px 0}.boss-victory-boss{font-size:20px;font-weight:800;margin:8px}.boss-victory-stars{font-size:28px;letter-spacing:5px;margin:10px}.boss-victory-score{font-size:22px;font-weight:900}.boss-victory p{color:var(--muted);line-height:1.5}@keyframes bossPop{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}@keyframes bossPulse{50%{transform:scale(1.12)}}@media(max-width:600px){.boss-victory-icon{font-size:55px}.boss-victory-title{font-size:22px}.boss-victory-stars{font-size:22px}}
+
+/* Cadastro e autenticação */
+.auth-box{max-width:560px;margin:auto;padding:26px!important}
+.auth-hero{display:flex;gap:15px;align-items:center;margin-bottom:18px}
+.auth-hero h3{font-size:24px;margin:0 0 5px}
+.auth-hero p{margin:0;color:var(--muted);font-size:13px}
+.auth-icon{width:62px;height:62px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),#9b5cff);border-radius:18px;font-size:32px;box-shadow:0 10px 25px #6d5dfc33}
+.auth-box label{display:block;color:#dce3ef;font-size:12px;font-weight:700;margin-top:12px}
+.auth-box label input{margin:7px 0 0!important}
+.auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:20px 0 8px}
+.auth-tab{padding:12px!important;font-weight:800}
+.auth-submit{width:100%;margin-top:14px}
+.auth-submit:disabled{opacity:.65;cursor:wait}
+.auth-benefits{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+.auth-benefits span{background:#0a111e;border:1px solid var(--line);border-radius:999px;padding:7px 10px;color:var(--muted);font-size:11px}
+.register-fields.hidden{display:none}
+@media(max-width:600px){.auth-box{padding:18px!important}.auth-hero h3{font-size:20px}}
