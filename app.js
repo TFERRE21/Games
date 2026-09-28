@@ -1088,7 +1088,21 @@ function motorcycle(){
     spacebattle: premiumGame,
     masterchef: premiumGame,
     flightacademy: premiumGame,
-    speedrace: premiumGame
+    speedrace: speedRace,
+    goalkeeper: goalKeeper,
+    princessdress: princessDress,
+    fashionstudio: fashionStudio,
+    petcare: petCare,
+    colorfun: ()=>coloringGame('fun'),
+    coloranimals: ()=>coloringGame('animals'),
+    colorcars: ()=>coloringGame('cars'),
+    masterchef: premiumChef,
+    pizzamaker: pizzaMaker,
+    bakery: bakery,
+    flightacademy: premiumFlight,
+    airport: airport,
+    speedrace: speedRace,
+    motorcycle: motorcycle
   };
 
   function fallbackArcade(g){
