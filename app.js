@@ -75,7 +75,19 @@ function updateDashboard(){
  document.querySelector('#navProfile').textContent=state.user?'👤 '+state.user:'👤 Entrar';
  const bar=document.querySelector('#accountBar'); if(state.user){bar.classList.remove('hidden');bar.textContent='Olá, '+state.user+'! Seus dados estão salvos neste navegador.'}else bar.classList.add('hidden');
 }
-function toggleFavorite(id,e){e.stopPropagation();const i=state.favorites.indexOf(id);if(i>=0)state.favorites.splice(i,1);else state.favorites.push(id);saveState();render(document.querySelector('.navbtn.active')?.dataset.filter||'all',document.querySelector('#search').value)}
+async function toggleFavorite(id,e){
+ e.stopPropagation();
+ const i=state.favorites.indexOf(id);
+ if(apiToken){
+  try{
+   if(i>=0){await api('/api/favorites/'+encodeURIComponent(id),{method:'DELETE'});state.favorites.splice(i,1)}
+   else{await api('/api/favorites/'+encodeURIComponent(id),{method:'POST'});state.favorites.push(id)}
+  }catch(err){authMessage(err.message)}
+ }else{
+  if(i>=0)state.favorites.splice(i,1);else state.favorites.push(id);
+ }
+ saveState();render(document.querySelector('.navbtn.active')?.dataset.filter||'all',document.querySelector('#search').value)
+}
 function showGames(list,title){document.querySelector('#viewTitle').classList.remove('hidden');document.querySelector('#viewTitle').textContent=title;const active=document.querySelector('.navbtn.active');render(active?active.dataset.filter:'all','');const grid=document.querySelector('#grid');grid.innerHTML=list.map(g=>`<article class="card" data-launch="${g.id}"><button class="fav-btn" onclick="toggleFavorite('${g.id}',event)">${state.favorites.includes(g.id)?'❤️':'🤍'}</button><div class="thumb">${g.icon}</div><h3>${g.name}</h3><p>${g.desc}</p><div class="tag">${g.cat.toUpperCase()} • JOGAR</div></article>`).join('');document.querySelectorAll('[data-launch]').forEach(b=>b.onclick=()=>launch(b.dataset.launch))}
 function addRecent(id){state.recent=[id,...state.recent.filter(x=>x!==id)].slice(0,12);saveState()}
 function openPanel(id){document.querySelectorAll('.feature-panel').forEach(x=>x.classList.add('hidden'));document.querySelector(id).classList.remove('hidden');document.querySelector(id).scrollIntoView({behavior:'smooth'})}
