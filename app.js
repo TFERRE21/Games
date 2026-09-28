@@ -56,7 +56,6 @@ function parking(){simPanel('Estacionamento','🅿️',[['Distância','v','0 m']
 function farm(){area.innerHTML='<div class="game-wrap"><h3>🚜 Fazenda</h3><p>🌱 Terreno: <b id="crop">0</b> • 🪙 Dinheiro: <b id="money">100</b></p><button class="primary" id="plant">Plantar</button> <button class="primary" id="harvest">Colher</button></div>';let crop=0,money=100;plant.onclick=()=>{if(money>=10){money-=10;crop++;moneyEl()}};harvest.onclick=()=>{money+=crop*18;crop=0;moneyEl()};function moneyEl(){document.querySelector('#crop').textContent=crop;document.querySelector('#money').textContent=money}}
 function fishing(){area.innerHTML='<div class="game-wrap"><div style="font-size:100px;cursor:pointer;text-align:center" id="fish">🎣</div><div id="fs" class="score">Peixes: 0 • Clique para lançar</div></div>';let n=0;fish.onclick=()=>{if(Math.random()>.35){n++;fs.textContent='🐟 Peixes: '+n+' • Boa pescaria!'}else fs.textContent='🌊 Nada fisgou. Tente de novo.'}}
 function space(){vehicle('Simulador Espacial','🚀',900,.0002)}
-render();
 
 // ===== PERFIL, FAVORITOS, RECENTES E RECORDES =====
 const STORE='games_online_v2';
@@ -89,3 +88,4 @@ function observeScore(id){
  collect();new MutationObserver(collect).observe(el,{childList:true,subtree:true,characterData:true});
 }
 updateDashboard();
+render();
