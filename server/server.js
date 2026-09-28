@@ -142,7 +142,7 @@ app.post('/api/scores',auth,(req,res)=>{
  res.json({ok:true,best});
 });
 
-app.get('/api/ranking',(req,res)=>{
+app.get('/api/ranking/phase/:gameId/:phase',(req,res)=>{\n const gameId=String(req.params.gameId).slice(0,80),phase=Math.max(1,Math.min(1000,Number(req.params.phase)||1));\n const rows=db.prepare(`SELECT p.score,u.name FROM phase_progress p JOIN users u ON u.id=p.user_id WHERE p.game_id=? AND p.phase=? ORDER BY p.score DESC LIMIT 100`).all(gameId,phase);\n res.json({gameId,phase,ranking:rows});\n});\n\napp.get('/api/ranking',(req,res)=>{
  const rows=db.prepare(`
  SELECT s.game_id, MAX(s.score) score, u.name
  FROM scores s JOIN users u ON u.id=s.user_id
