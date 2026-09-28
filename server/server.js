@@ -132,7 +132,7 @@ app.get('/api/rooms/:code',auth,(req,res)=>{
  if(!room)return res.status(404).json({error:'Sala não encontrada'});res.json({room});
 });
 app.get('/api/progress',auth,(req,res)=>{
- const p=db.prepare('SELECT lives,coins,xp,level,next_life_at FROM player_progress WHERE user_id=?').get(req.user.id)||{lives:5,coins:0,xp:0,level:1,next_life_at:0};
+ const p=ensurePlayer(req.user.id);
  const phases=db.prepare('SELECT game_id,phase,stars,score FROM phase_progress WHERE user_id=?').all(req.user.id);
  res.json({player:p,phases});
 });
