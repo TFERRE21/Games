@@ -455,6 +455,71 @@ function premiumBoss(g,p,boss){
  drawHud();info.innerHTML='<b>👹 '+boss.name+'</b><br>Derrote o chefe em 3 etapas! • Setas/WASD para mover • Espaço para ação';setTimeout(loop,600);
 }
 
+// ===== MOTOR DOS JOGOS PREMIUM =====
+function premiumCanvas(title,subtitle){
+  area.innerHTML='<div class="game-wrap premium-wrap">'+
+    '<div id="premiumInfo" class="premium-info"></div>'+
+    '<canvas id="premiumGameCanvas" width="820" height="460" style="display:block;width:100%;max-width:820px;margin:auto;border-radius:14px;background:#08101b"></canvas>'+
+    '<div id="premiumScore" class="score">0 pts</div>'+
+    '<div id="premiumActions" class="campaign-actions"></div>'+
+    '<div class="controls">'+subtitle+'</div>'+
+  '</div>';
+  const c=document.querySelector('#premiumGameCanvas');
+  const s=document.querySelector('#premiumScore');
+  const info=document.querySelector('#premiumInfo');
+  const actions=document.querySelector('#premiumActions');
+  return[c,s,info,actions];
+}
+function premiumFinish(id,phase,score=0,success=true){
+  if(!success)return;
+  const next=Math.min(100,phase+1);
+  saveProgress(id,next);
+  const stars=phaseStars(id,phase,true)||3;
+  addRPGReward(id,phase,stars);
+  const info=document.querySelector('#premiumInfo'),actions=document.querySelector('#premiumActions'),s=document.querySelector('#premiumScore');
+  if(!info||!actions)return;
+  if(s)s.textContent=score+' pts • '+('⭐'.repeat(stars));
+  info.innerHTML='<b>🏆 FASE '+phase+' CONCLUÍDA!</b><br>'+('⭐'.repeat(stars))+' • +'+(stars*10)+' 🪙 • +'+(stars*25)+' XP';
+  actions.innerHTML='';
+  if(phase<100){
+    const b=document.createElement('button');
+    b.className='primary';
+    b.textContent='PRÓXIMA FASE ▶';
+    b.onclick=()=>premiumGame(id);
+    actions.appendChild(b);
+  }else{
+    const b=document.createElement('button');
+    b.className='primary';
+    b.textContent='🏆 CAMPANHA COMPLETA';
+    b.onclick=()=>{info.innerHTML='<b>👑 PARABÉNS!</b><br>Você concluiu as 100 fases.'};
+    actions.appendChild(b);
+  }
+  gameSound('win');
+  updateRPGHud();
+}
+function premiumGameCore(g,p){
+  switch(g.id){
+    case 'superplumber': return premiumPlumber(g,p);
+    case 'kartrush':
+    case 'speedrace': return premiumRace(g,p);
+    case 'citydriver': return premiumCity(g,p);
+    case 'spacebattle': return premiumSpace(g,p);
+    case 'masterchef': return premiumChef(g,p);
+    case 'flightacademy': return premiumFlight(g,p);
+    default: return campaignGame(g.id);
+  }
+}
+function premiumGame(id){
+  const g=games.find(x=>x.id===id)||games[0];
+  const p=getProgress(id);
+  if(typeof showSpecialIntro==='function' && typeof BOSS_EVENTS!=='undefined' && BOSS_EVENTS[p]){
+    // O chefe cria seu próprio HUD e arena.
+    launchBossOrPremium(g,p);
+    return;
+  }
+  premiumGameCore(g,p);
+  if(typeof showSpecialIntro==='function')showSpecialIntro(p);
+}
 function premiumPlumber(g,p){
  const[c,s,info]=premiumCanvas(g.name,'Aventura de plataforma • Fase '+p);const x=c.getContext('2d');let px=70,py=360,vx=0,vy=0,coins=0,score=0,k={},done=false;
  const world=()=>{x.fillStyle='#79c7ff';x.fillRect(0,0,820,460);x.fillStyle='#62b84b';x.fillRect(0,405,820,55);x.fillStyle='#8b5a2b';x.fillRect(0,425,820,35);for(let i=0;i<7;i++){let bx=120+i*105-(p*17%70),by=330-(i%3)*65;x.fillStyle='#8d6b45';x.fillRect(bx,by,75,16);x.fillStyle='#ffd84d';x.beginPath();x.arc(bx+38,by-18,9,0,7);x.fill()}x.fillStyle='#e64b4b';x.fillRect(px,py,30,40);x.fillStyle='#27364d';x.fillRect(px+6,py+28,18,12)};
