@@ -335,7 +335,59 @@ function addRPGPanel(){
 .rpg-hud{margin:10px 0;padding:12px 16px;background:#101a2b;border:1px solid #33405a;border-radius:12px;text-align:center;font-weight:700;line-height:1.8}.campaign-head{position:relative}.campaign-level{white-space:nowrap}.campaign-body{min-height:320px}.campaign-actions{gap:12px}.campaign-progress span{background:linear-gradient(90deg,#18d6a0,#6d5dfc)}`;
 document.head.appendChild(s)})();
 
-// ===== PORTAL COMPLETO: PERFIL, LOJA, MISSOES, CONQUISTAS E SALAS =====
+// ===== JOGOS PREMIUM: GAMEPLAY PRÓPRIO =====
+const PREMIUM_GAMES=new Set(['superplumber','kartrush','citydriver','spacebattle','masterchef','flightacademy','speedrace']);
+const premiumLaunch=launch;
+function premiumCanvas(title,sub){area.innerHTML='<div class="game-wrap premium-game"><div class="premium-top"><div><span class="eyebrow">MODO CAMPANHA</span><h3>'+title+'</h3><p>'+sub+'</p></div><div id="premiumScore" class="score">0</div></div><canvas id="premiumCanvas" width="820" height="460"></canvas><div id="premiumInfo" class="controls">Setas / WASD • Espaço • toque</div><div id="premiumActions"></div></div>';return[document.querySelector('#premiumCanvas'),document.querySelector('#premiumScore'),document.querySelector('#premiumInfo')]}
+
+function premiumFinish(id,phase,score,win=true){
+ if(!win)return;
+ const stars=score>=850?3:score>=600?2:1;
+ saveProgress(id,Math.min(100,phase+1));addRPGReward(id,phase,stars);
+ document.querySelector('#premiumInfo').innerHTML='🏆 Fase concluída • '+('⭐'.repeat(stars))+' • '+score+' pontos • Próxima fase '+Math.min(100,phase+1);
+ gameSound('win');
+ const b=document.createElement('button');b.className='primary';b.textContent=phase>=100?'🏆 CAMPANHA COMPLETA':'PRÓXIMA FASE ▶';b.onclick=()=>campaignGame(id);document.querySelector('#premiumActions').appendChild(b);
+}
+function premiumGame(id){
+ const g=games.find(x=>x.id===id),phase=getProgress(id);
+ if(id==='superplumber')return premiumPlumber(g,phase);
+ if(id==='kartrush'||id==='speedrace')return premiumRace(g,phase);
+ if(id==='citydriver')return premiumCity(g,phase);
+ if(id==='spacebattle')return premiumSpace(g,phase);
+ if(id==='masterchef')return premiumChef(g,phase);
+ if(id==='flightacademy')return premiumFlight(g,phase);
+}
+function premiumPlumber(g,p){
+ const[c,s,info]=premiumCanvas(g.name,'Aventura de plataforma • Fase '+p);const x=c.getContext('2d');let px=70,py=360,vx=0,vy=0,coins=0,score=0,k={},done=false;
+ const world=()=>{x.fillStyle='#79c7ff';x.fillRect(0,0,820,460);x.fillStyle='#62b84b';x.fillRect(0,405,820,55);x.fillStyle='#8b5a2b';x.fillRect(0,425,820,35);for(let i=0;i<7;i++){let bx=120+i*105-(p*17%70),by=330-(i%3)*65;x.fillStyle='#8d6b45';x.fillRect(bx,by,75,16);x.fillStyle='#ffd84d';x.beginPath();x.arc(bx+38,by-18,9,0,7);x.fill()}x.fillStyle='#e64b4b';x.fillRect(px,py,30,40);x.fillStyle='#27364d';x.fillRect(px+6,py+28,18,12)};
+ const key=e=>{k[e.key.toLowerCase()]=1;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault()},up=e=>k[e.key.toLowerCase()]=0;addEventListener('keydown',key);addEventListener('keyup',up);
+ function loop(){if(done)return;world();if(k.a||k.arrowleft)vx=-4;if(k.d||k.arrowright)vx=4;if(!(k.a||k.d||k.arrowleft||k.arrowright))vx*=.8;if((k.w||k[' ']||k.arrowup)&&py>=365)vy=-12;vy+=.55;px+=vx;py+=vy;if(py>365){py=365;vy=0}px=Math.max(0,Math.min(790,px));if(px>750){coins=3;score=900;done=true;premiumFinish(g.id,p,score,true)}else{if(Math.random()<.025)coins=Math.min(6,coins+1);score=Math.min(850,Math.floor((px/750)*700+coins*40));s.textContent=score+' pts • 🪙 '+coins;info.textContent='Chegue ao portal verde • '+Math.floor(px/7.5)+'%';requestAnimationFrame(loop)}}loop();
+}
+function premiumRace(g,p){
+ const[c,s,info]=premiumCanvas(g.name,'Circuito com tráfego • Fase '+p);const x=c.getContext('2d');let car=390,lane=1,speed=5,dist=0,score=0,obs=[],k={},done=false;for(let i=0;i<5;i++)obs.push({lane:(i+p)%3,y:-i*150-100});
+ const key=e=>{k[e.key]=1;if(['ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault()},up=e=>k[e.key]=0;addEventListener('keydown',key);addEventListener('keyup',up);
+ function loop(){if(done)return;x.fillStyle='#69a6d8';x.fillRect(0,0,820,460);x.fillStyle='#292d35';x.fillRect(180,0,460,460);x.fillStyle='#d9d9d9';for(let i=1;i<3;i++)for(let y=-40+(dist%80);y<460;y+=80)x.fillRect(180+i*153,y,5,42);if(k.ArrowLeft){lane=Math.max(0,lane-.04)}if(k.ArrowRight){lane=Math.min(2,lane+.04)}car=210+lane*153;speed=Math.min(10,5+p*.035+(k[' ']?2:0));dist+=speed;obs.forEach(o=>{o.y+=speed;o.x=210+o.lane*153;if(o.y>500){o.y=-100; o.lane=Math.floor(Math.random()*3);score+=80}x.fillStyle='#ef5b5b';x.fillRect(o.x-22,o.y,44,70);if(Math.abs(o.x-car)<42&&o.y>345&&o.y<430){done=true;gameSound('fail');info.textContent='💥 Batida! Fase não concluída. Use a campanha para tentar novamente.'}});x.fillStyle='#20d6a0';x.fillRect(car-25,365,50,80);score=Math.floor(dist*.6);s.textContent=score+' pts • velocidade '+speed.toFixed(1);info.textContent='Desvie do trânsito • '+Math.floor(dist/10)+'m';if(dist>=1200){done=true;premiumFinish(g.id,p,Math.min(1000,score),true)}else if(!done)requestAnimationFrame(loop)}loop();
+}
+function premiumCity(g,p){
+ const[c,s,info]=premiumCanvas(g.name,'Missão urbana • Fase '+p);const x=c.getContext('2d');let car={x:385,y:380},target={x:120+(p*71)%560,y:80+(p*43)%250},k={},fuel=100,score=0,done=false;
+ const key=e=>k[e.key]=1,up=e=>k[e.key]=0;addEventListener('keydown',key);addEventListener('keyup',up);
+ function loop(){if(done)return;x.fillStyle='#152238';x.fillRect(0,0,820,460);x.fillStyle='#303947';for(let i=0;i<5;i++){x.fillRect(i*170,0,90,460);x.fillRect(0,i*100,820,55)}x.fillStyle='#f5d76e';x.fillRect(target.x,target.y,45,35);x.fillStyle='#31c7ff';x.fillRect(car.x,car.y,36,55);let dx=0,dy=0;if(k.ArrowLeft)dx=-3;if(k.ArrowRight)dx=3;if(k.ArrowUp)dy=-3;if(k.ArrowDown)dy=3;car.x=Math.max(0,Math.min(784,car.x+dx));car.y=Math.max(0,Math.min(405,car.y+dy));fuel-=.015;const d=Math.hypot(car.x-target.x,car.y-target.y);score=Math.max(0,Math.floor(1000-d*1.3-fuel<0?0:1000-d*1.3));s.textContent=score+' pts • ⛽ '+fuel.toFixed(0)+'%';info.textContent='Leve o carro até o marcador amarelo';if(d<48){done=true;premiumFinish(g.id,p,Math.max(600,Math.floor(1000-d*2)),true)}else if(fuel<=0){done=true;info.textContent='⛽ Combustível esgotado. Tente novamente.'}else requestAnimationFrame(loop)}loop();
+}
+function premiumSpace(g,p){
+ const[c,s,info]=premiumCanvas(g.name,'Batalha espacial • Fase '+p);const x=c.getContext('2d');let ship=380,shots=[],enemies=[],score=0,k={},done=false;for(let i=0;i<5+Math.min(8,p/10);i++)enemies.push({x:80+(i%7)*100,y:60+Math.floor(i/7)*55,hp:1+(p>40?1:0)});
+ const key=e=>{k[e.key]=1;if(e.key===' ')e.preventDefault()},up=e=>k[e.key]=0;addEventListener('keydown',key);addEventListener('keyup',up);
+ function loop(){if(done)return;x.fillStyle='#050816';x.fillRect(0,0,820,460);for(let i=0;i<70;i++){x.fillStyle='#fff';x.fillRect((i*97)%820,(i*53+Date.now()/20)%460,2,2)}if(k.ArrowLeft||k.a)ship-=6;if(k.ArrowRight||k.d)ship+=6;ship=Math.max(20,Math.min(780,ship));if(k[' ']&&shots.length<8)shots.push({x:ship,y:390});shots.forEach(q=>q.y-=9);shots=shots.filter(q=>q.y>0);enemies.forEach(e=>{e.y+=Math.sin(Date.now()/500+e.x)*.25;shots.forEach(q=>{if(Math.abs(q.x-e.x)<30&&Math.abs(q.y-e.y)<25){e.hp--;q.y=-99;if(e.hp<=0){score+=120;e.dead=true}}})});enemies=enemies.filter(e=>!e.dead);x.fillStyle='#22d3ee';x.beginPath();x.moveTo(ship,370);x.lineTo(ship-22,415);x.lineTo(ship+22,415);x.fill();x.fillStyle='#ff5864';enemies.forEach(e=>{x.fillRect(e.x-20,e.y-15,40,30)});x.fillStyle='#ffd166';shots.forEach(q=>x.fillRect(q.x-2,q.y,4,12));s.textContent=score+' pts • inimigos '+enemies.length;info.textContent='Destrua todos os inimigos • Espaço atira';if(!enemies.length){done=true;premiumFinish(g.id,p,Math.min(1000,score),true)}else requestAnimationFrame(loop)}loop();
+}
+function premiumChef(g,p){
+ const[c,s,info]=premiumCanvas(g.name,'Cozinha profissional • Pedido '+p);const x=c.getContext('2d');let order=['🍅','🧀','🍞'][p%3],picked=null,score=0,done=false;const items=['🍅','🧀','🍞','🥕','🍓','🥚'];x.fillStyle='#171f30';x.fillRect(0,0,820,460);x.font='42px sans-serif';x.fillText('PEDIDO DO CLIENTE',280,70);x.font='64px sans-serif';x.fillText(order,375,145);info.textContent='Escolha o ingrediente correto';items.forEach((it,i)=>{const b=document.createElement('button');b.textContent=it;b.className='chef-choice';b.onclick=()=>{picked=it;document.querySelectorAll('.chef-choice').forEach(z=>z.classList.remove('selected'));b.classList.add('selected');if(it===order){score=900;s.textContent=score+' pts';info.textContent='👨‍🍳 Perfeito!';if(!done){done=true;premiumFinish(g.id,p,score,true)}}else{score=150;s.textContent=score+' pts';info.textContent='❌ Ingrediente errado — tente novamente';gameSound('fail')}};document.querySelector('#premiumActions').appendChild(b)});s.textContent='0 pts';
+}
+function premiumFlight(g,p){
+ const[c,s,info]=premiumCanvas(g.name,'Treinamento de voo • Fase '+p);const x=c.getContext('2d');let alt=2500,spd=150,fuel=100,k={},done=false;const key=e=>k[e.key]=1,up=e=>k[e.key]=0;addEventListener('keydown',key);addEventListener('keyup',up);
+ function loop(){if(done)return;x.fillStyle='#78b9e6';x.fillRect(0,0,820,300);x.fillStyle='#1f5d38';x.fillRect(0,300,820,160);x.fillStyle='#fff';x.fillRect(630,260,90,5);if(k.ArrowUp)alt+=12;if(k.ArrowDown)alt-=12;if(k.ArrowRight)spd+=1;if(k.ArrowLeft)spd-=1;alt=Math.max(500,Math.min(6000,alt));spd=Math.max(80,Math.min(300,spd));fuel-=.025;const targetAlt=1500+((p*317)%3000),targetSpd=130+((p*29)%100);x.fillStyle='#fff';x.font='20px system-ui';x.fillText('ALT '+Math.round(alt)+' ft',25,35);x.fillText('SPD '+Math.round(spd)+' kt',25,62);x.fillText('ALVO '+targetAlt+' ft / '+targetSpd+' kt',25,90);s.textContent='Precisão '+Math.max(0,100-Math.floor(Math.abs(alt-targetAlt)/30+Math.abs(spd-targetSpd)/2))+'%';info.textContent='Ajuste altitude e velocidade ao alvo';if(Math.abs(alt-targetAlt)<100&&Math.abs(spd-targetSpd)<8){done=true;premiumFinish(g.id,p,900,true)}else if(fuel<=0){done=true;info.textContent='⛽ Combustível esgotado.'}else requestAnimationFrame(loop)}loop();
+}
+const originalLaunchPremium=launch;
+launch=function(id){if(PREMIUM_GAMES.has(id)){const g=games.find(x=>x.id===id)||games[0];document.querySelector('#gameCategory').textContent=g.cat.toUpperCase();document.querySelector('#gameTitle').textContent=g.name;modal.classList.remove('hidden');premiumGame(id);return}originalLaunchPremium(id)};
+\n// ===== PORTAL COMPLETO: PERFIL, LOJA, MISSOES, CONQUISTAS E SALAS =====
 const PORTAL_KEY='games_portal_v2';
 const portal=JSON.parse(localStorage.getItem(PORTAL_KEY)||'{}');
 portal.nickname=portal.nickname||'Jogador';
