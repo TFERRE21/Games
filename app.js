@@ -592,19 +592,67 @@ function premiumPlumber(g,p){
  draw();loop();
 }
 function premiumRace(g,p){
- const[c,s,info]=premiumCanvas(g.name,'Circuito com tráfego • Fase '+p);const x=c.getContext('2d');let car=390,lane=1,speed=5,dist=0,score=0,obs=[],k={},done=false;for(let i=0;i<5;i++)obs.push({lane:(i+p)%3,y:-i*150-100});
- const key=e=>{k[e.key]=1;if(['ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault()},up=e=>k[e.key]=0;addEventListener('keydown',key);addEventListener('keyup',up);
- function loop(){if(done)return;x.fillStyle='#69a6d8';x.fillRect(0,0,820,460);x.fillStyle='#292d35';x.fillRect(180,0,460,460);x.fillStyle='#d9d9d9';for(let i=1;i<3;i++)for(let y=-40+(dist%80);y<460;y+=80)x.fillRect(180+i*153,y,5,42);if(k.ArrowLeft){lane=Math.max(0,lane-.04)}if(k.ArrowRight){lane=Math.min(2,lane+.04)}car=210+lane*153;speed=Math.min(10,5+p*.035+(k[' ']?2:0));dist+=speed;obs.forEach(o=>{o.y+=speed;o.x=210+o.lane*153;if(o.y>500){o.y=-100; o.lane=Math.floor(Math.random()*3);score+=80}x.fillStyle='#ef5b5b';x.fillRect(o.x-22,o.y,44,70);if(Math.abs(o.x-car)<42&&o.y>345&&o.y<430){done=true;gameSound('fail');info.textContent='💥 Batida! Fase não concluída. Use a campanha para tentar novamente.'}});x.fillStyle='#20d6a0';x.fillRect(car-25,365,50,80);score=Math.floor(dist*.6);s.textContent=score+' pts • velocidade '+speed.toFixed(1);info.textContent='Desvie do trânsito • '+Math.floor(dist/10)+'m';if(dist>=1200){done=true;premiumFinish(g.id,p,Math.min(1000,score),true)}else if(!done)requestAnimationFrame(loop)}loop();
+ const[c,s,info]=premiumCanvas(g.name,'Circuito longo • Fase '+p+' • câmera acompanha',);const x=c.getContext('2d');
+ const worldW=5200+p*18;let carX=260,carY=350,vy=0,cam=0,dist=0,score=0,lives=3,done=false,k={};
+ const obstacles=[];for(let i=0;i<18+Math.floor(p/5);i++)obstacles.push({x:500+i*250+(p*31%90),y:290-(i%3)*20,w:42,h:68,lane:i%3,hit:false});
+ const key=e=>{k[e.key]=1;if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(e.key))e.preventDefault()},up=e=>k[e.key]=0;addEventListener('keydown',key);addEventListener('keyup',up);
+ function loop(){
+  if(done)return;
+  const targetY=350+(k.ArrowUp?-3:k.ArrowDown?3:0);carY+=(targetY-carY)*.15;
+  if(k.ArrowLeft)carX-=5;if(k.ArrowRight)carX+=5;carX=Math.max(190,Math.min(worldW-190,carX));
+  dist=Math.max(dist,carX-260);cam=Math.max(0,Math.min(worldW-W,carX-W*.38));
+  x.fillStyle='#78b9e8';x.fillRect(0,0,820,460);x.save();x.translate(-cam,0);
+  x.fillStyle='#26313b';x.fillRect(0,0,worldW,460);x.fillStyle='#3e4650';x.fillRect(170,0,worldW-340,460);
+  x.fillStyle='#f2f2f2';for(let xx=210;xx<worldW;xx+=220)x.fillRect(xx,0,5,460);
+  x.fillStyle='#1e2329';for(let i=0;i<20;i++){let bx=120+i*300;x.fillRect(bx,80+(i%3)*35,55,90);x.fillStyle='#ffd166';x.fillRect(bx+10,95+(i%3)*35,10,12);x.fillRect(bx+30,95+(i%3)*35,10,12);x.fillStyle='#1e2329'}
+  obstacles.forEach(o=>{x.fillStyle='#ef5b5b';x.fillRect(o.x,o.y,o.w,o.h);x.fillStyle='#fff';x.fillRect(o.x+8,o.y+10,8,8);x.fillRect(o.x+26,o.y+10,8,8);if(!o.hit&&Math.abs(o.x-carX)<45&&Math.abs(o.y-carY)<55){o.hit=true;lives--;score=Math.max(0,score-120);carX=Math.max(260,carX-180);gameSound('fail');if(lives<=0){done=true;info.textContent='💥 Sem vidas. Tente a fase novamente.'}}});
+  x.fillStyle='#20d6a0';x.fillRect(carX-25,carY,50,80);x.fillStyle='#10202a';x.fillRect(carX-16,carY+10,32,22);
+  x.fillStyle='#ffd447';x.fillRect(worldW-180,270,55,90);x.restore();
+  score=Math.max(score,Math.floor(dist*.75));s.textContent=score+' pts • 🚗 '+Math.floor(dist/worldW*100)+'% • ❤️ '+lives;
+  info.textContent='Desvie dos carros e alcance a chegada • ← → mover';
+  if(carX>=worldW-200){done=true;premiumFinish(g.id,p,Math.min(2500,score+500),true);info.textContent='🏁 CHEGADA! Fase concluída.'}
+  if(!done)requestAnimationFrame(loop);
+ }loop();
 }
 function premiumCity(g,p){
- const[c,s,info]=premiumCanvas(g.name,'Missão urbana • Fase '+p);const x=c.getContext('2d');let car={x:385,y:380},target={x:120+(p*71)%560,y:80+(p*43)%250},k={},fuel=100,score=0,done=false;
+ const[c,s,info]=premiumCanvas(g.name,'Cidade aberta • Fase '+p+' • câmera livre',);const x=c.getContext('2d');
+ const worldW=4200+p*15,worldH=900;let car={x:120,y:420,w:38,h:58},camX=0,camY=180,fuel=100,score=0,done=false,k={};
+ const targets=[...Array(6)].map((_,i)=>({x:500+i*570+(p*37%120),y:120+(i%3)*230,done:false}));
+ const traffic=[...Array(14)].map((_,i)=>({x:300+i*280,y:100+(i%4)*180,v:i%2?1.2:-1.2}));
  const key=e=>k[e.key]=1,up=e=>k[e.key]=0;addEventListener('keydown',key);addEventListener('keyup',up);
- function loop(){if(done)return;x.fillStyle='#152238';x.fillRect(0,0,820,460);x.fillStyle='#303947';for(let i=0;i<5;i++){x.fillRect(i*170,0,90,460);x.fillRect(0,i*100,820,55)}x.fillStyle='#f5d76e';x.fillRect(target.x,target.y,45,35);x.fillStyle='#31c7ff';x.fillRect(car.x,car.y,36,55);let dx=0,dy=0;if(k.ArrowLeft)dx=-3;if(k.ArrowRight)dx=3;if(k.ArrowUp)dy=-3;if(k.ArrowDown)dy=3;car.x=Math.max(0,Math.min(784,car.x+dx));car.y=Math.max(0,Math.min(405,car.y+dy));fuel-=.015;const d=Math.hypot(car.x-target.x,car.y-target.y);score=Math.max(0,Math.floor(1000-d*1.3-fuel<0?0:1000-d*1.3));s.textContent=score+' pts • ⛽ '+fuel.toFixed(0)+'%';info.textContent='Leve o carro até o marcador amarelo';if(d<48){done=true;premiumFinish(g.id,p,Math.max(600,Math.floor(1000-d*2)),true)}else if(fuel<=0){done=true;info.textContent='⛽ Combustível esgotado. Tente novamente.'}else requestAnimationFrame(loop)}loop();
+ function loop(){if(done)return;
+  let dx=(k.ArrowRight||k.d?3.8:0)-(k.ArrowLeft||k.a?3.8:0),dy=(k.ArrowDown||k.s?3.8:0)-(k.ArrowUp||k.w?3.8:0);
+  car.x=Math.max(40,Math.min(worldW-car.w,car.x+dx));car.y=Math.max(40,Math.min(worldH-car.h,car.y+dy));fuel=Math.max(0,fuel-.012*(Math.abs(dx)+Math.abs(dy)+.5));
+  targets.forEach(t=>{if(!t.done&&Math.hypot(car.x-t.x,car.y-t.y)<65){t.done=true;score+=180;gameSound('coin')}});
+  traffic.forEach(t=>{t.x+=t.v;if(t.x<80||t.x>worldW-80)t.v*=-1});
+  camX=Math.max(0,Math.min(worldW-W,car.x-W*.4));camY=Math.max(0,Math.min(worldH-H,car.y-H*.45));
+  x.fillStyle='#74b9e8';x.fillRect(0,0,W,H);x.save();x.translate(-camX,-camY);
+  x.fillStyle='#4b9b50';x.fillRect(0,0,worldW,worldH);
+  for(let xx=0;xx<worldW;xx+=360){x.fillStyle='#343a42';x.fillRect(xx,0,100,worldH);x.fillRect(0,xx*.18,worldW,90)}
+  for(let i=0;i<targets.length;i++){let t=targets[i];x.fillStyle=t.done?'#28d17c':'#ffd34d';x.beginPath();x.arc(t.x,t.y,24,0,Math.PI*2);x.fill();x.fillStyle='#17202b';x.font='bold 14px system-ui';x.fillText(t.done?'✓':String(i+1),t.x-5,t.y+5)}
+  traffic.forEach(t=>{x.fillStyle='#d94b55';x.fillRect(t.x,t.y,38,58)});
+  x.fillStyle='#27c7ff';x.fillRect(car.x,car.y,car.w,car.h);x.fillStyle='#14202b';x.fillRect(car.x+6,car.y+8,26,20);x.restore();
+  const doneCount=targets.filter(t=>t.done).length;s.textContent=score+' pts • 🎯 '+doneCount+'/'+targets.length+' • ⛽ '+fuel.toFixed(0)+'%';info.textContent='Visite todos os marcadores amarelos • WASD/setas';
+  if(doneCount===targets.length){done=true;premiumFinish(g.id,p,Math.min(2500,score+500),true)}else if(fuel<=0){done=true;info.textContent='⛽ Combustível esgotado. Tente novamente.'}else requestAnimationFrame(loop);
+ }loop();
 }
 function premiumSpace(g,p){
- const[c,s,info]=premiumCanvas(g.name,'Batalha espacial • Fase '+p);const x=c.getContext('2d');let ship=380,shots=[],enemies=[],score=0,k={},done=false;for(let i=0;i<5+Math.min(8,p/10);i++)enemies.push({x:80+(i%7)*100,y:60+Math.floor(i/7)*55,hp:1+(p>40?1:0)});
+ const[c,s,info]=premiumCanvas(g.name,'Arena espacial • Fase '+p+' • ondas de inimigos',);const x=c.getContext('2d');
+ let ship={x:410,y:390,w:28,h:34},shots=[],enemies=[],score=0,wave=1,done=false,k={},cool=0;
+ const total=6+Math.min(18,Math.floor(p/4));for(let i=0;i<total;i++)enemies.push({x:70+(i%9)*90,y:60+Math.floor(i/9)*65,hp:1+(p>35?1:0),vx:i%2?1:-1,alive:true});
  const key=e=>{k[e.key]=1;if(e.key===' ')e.preventDefault()},up=e=>k[e.key]=0;addEventListener('keydown',key);addEventListener('keyup',up);
- function loop(){if(done)return;x.fillStyle='#050816';x.fillRect(0,0,820,460);for(let i=0;i<70;i++){x.fillStyle='#fff';x.fillRect((i*97)%820,(i*53+Date.now()/20)%460,2,2)}if(k.ArrowLeft||k.a)ship-=6;if(k.ArrowRight||k.d)ship+=6;ship=Math.max(20,Math.min(780,ship));if(k[' ']&&shots.length<8)shots.push({x:ship,y:390});shots.forEach(q=>q.y-=9);shots=shots.filter(q=>q.y>0);enemies.forEach(e=>{e.y+=Math.sin(Date.now()/500+e.x)*.25;shots.forEach(q=>{if(Math.abs(q.x-e.x)<30&&Math.abs(q.y-e.y)<25){e.hp--;q.y=-99;if(e.hp<=0){score+=120;e.dead=true}}})});enemies=enemies.filter(e=>!e.dead);x.fillStyle='#22d3ee';x.beginPath();x.moveTo(ship,370);x.lineTo(ship-22,415);x.lineTo(ship+22,415);x.fill();x.fillStyle='#ff5864';enemies.forEach(e=>{x.fillRect(e.x-20,e.y-15,40,30)});x.fillStyle='#ffd166';shots.forEach(q=>x.fillRect(q.x-2,q.y,4,12));s.textContent=score+' pts • inimigos '+enemies.length;info.textContent='Destrua todos os inimigos • Espaço atira';if(!enemies.length){done=true;premiumFinish(g.id,p,Math.min(1000,score),true)}else requestAnimationFrame(loop)}loop();
+ function loop(){if(done)return;x.fillStyle='#050816';x.fillRect(0,0,W,H);
+  for(let i=0;i<90;i++){x.fillStyle='#fff';x.fillRect((i*83)%W,(i*47+Date.now()/18)%H,2,2)}
+  if(k.ArrowLeft||k.a)ship.x-=6;if(k.ArrowRight||k.d)ship.x+=6;if(k.ArrowUp||k.w)ship.y-=4;if(k.ArrowDown||k.s)ship.y+=4;ship.x=Math.max(20,Math.min(W-20,ship.x));ship.y=Math.max(250,Math.min(H-30,ship.y));
+  if(k[' ']&&cool<=0){shots.push({x:ship.x,y:ship.y-15});cool=10}cool--;
+  shots.forEach(q=>q.y-=9);shots=shots.filter(q=>q.y>-10);
+  enemies.forEach(e=>{e.x+=e.vx;if(e.x<25||e.x>W-25)e.vx*=-1;e.y+=Math.sin(Date.now()/600+e.x)*.15;shots.forEach(q=>{if(e.alive&&Math.abs(q.x-e.x)<25&&Math.abs(q.y-e.y)<22){e.hp--;q.y=-99;if(e.hp<=0){e.alive=false;score+=100}}})});
+  x.fillStyle='#24d4ff';x.beginPath();x.moveTo(ship.x,ship.y-20);x.lineTo(ship.x-20,ship.y+18);x.lineTo(ship.x+20,ship.y+18);x.fill();
+  enemies.forEach(e=>{if(!e.alive)return;x.fillStyle='#e94f65';x.fillRect(e.x-18,e.y-14,36,28);x.fillStyle='#ffd166';x.fillRect(e.x-7,e.y-5,14,10)});
+  x.fillStyle='#ffe36e';shots.forEach(q=>x.fillRect(q.x-2,q.y,4,13));
+  const left=enemies.filter(e=>e.alive).length;s.textContent=score+' pts • 👾 '+left+' inimigos • 🌊 Onda '+wave;info.textContent='WASD/setas mover • ESPAÇO atirar';
+  if(!left){done=true;premiumFinish(g.id,p,Math.min(2500,score),true)}else requestAnimationFrame(loop);
+ }loop();
 }
 function premiumChef(g,p){
  const[c,s,info]=premiumCanvas(g.name,'Cozinha profissional • Pedido '+p);const x=c.getContext('2d');let order=['🍅','🧀','🍞'][p%3],picked=null,score=0,done=false;const items=['🍅','🧀','🍞','🥕','🍓','🥚'];x.fillStyle='#171f30';x.fillRect(0,0,820,460);x.font='42px sans-serif';x.fillText('PEDIDO DO CLIENTE',280,70);x.font='64px sans-serif';x.fillText(order,375,145);info.textContent='Escolha o ingrediente correto';items.forEach((it,i)=>{const b=document.createElement('button');b.textContent=it;b.className='chef-choice';b.onclick=()=>{picked=it;document.querySelectorAll('.chef-choice').forEach(z=>z.classList.remove('selected'));b.classList.add('selected');if(it===order){score=900;s.textContent=score+' pts';info.textContent='👨‍🍳 Perfeito!';if(!done){done=true;premiumFinish(g.id,p,score,true)}}else{score=150;s.textContent=score+' pts';info.textContent='❌ Ingrediente errado — tente novamente';gameSound('fail')}};document.querySelector('#premiumActions').appendChild(b)});s.textContent='0 pts';
