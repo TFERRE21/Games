@@ -694,3 +694,28 @@ async function pollRoom(){
  try{const d=await api('/api/rooms/'+currentRoom);document.querySelector('#roomMsg').textContent='Sala '+currentRoom+' • '+(d.room.status==='ready'?'🟢 2 jogadores prontos!':'🟡 aguardando adversário...');if(d.room.status!=='ready')setTimeout(pollRoom,2000)}catch(e){}
 }
 syncRPG();
+
+
+/* ===== ABERTURA ROBUSTA DOS JOGOS ===== */
+launch = function(id){
+  const g=games.find(x=>x.id===id)||games[0];
+  try{
+    addRecent(id);
+    document.querySelector('#gameCategory').textContent=g.cat.toUpperCase();
+    document.querySelector('#gameTitle').textContent=g.name;
+    modal.classList.remove('hidden');
+    if(PREMIUM_GAMES.has(id)){
+      premiumGame(id);
+    }else{
+      campaignGame(id);
+    }
+  }catch(err){
+    console.error('Games Online - erro ao abrir jogo:',err);
+    modal.classList.remove('hidden');
+    area.innerHTML='<div class="game-wrap" style="text-align:center;padding:40px"><div style="font-size:70px">🎮</div><h3>Jogo carregando...</h3><p>O jogo encontrou um erro ao iniciar. Recarregue a página e tente novamente.</p><button class="primary" onclick="location.reload()">RECARREGAR JOGO</button></div>';
+  }
+};
+document.querySelectorAll('[data-launch]').forEach(b=>{
+  b.onclick=(e)=>{e.preventDefault();e.stopPropagation();launch(b.dataset.launch)};
+});
+
