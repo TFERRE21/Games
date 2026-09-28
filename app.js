@@ -719,3 +719,95 @@ document.querySelectorAll('[data-launch]').forEach(b=>{
   b.onclick=(e)=>{e.preventDefault();e.stopPropagation();launch(b.dataset.launch)};
 });
 
+
+
+/* ===== JOGOS REAIS: NAO USAR A TELA GENERICA DE CAMPANHA ===== */
+(function(){
+  const REAL_GAME_MAP = {
+    platformer: platformer,
+    snake: snake,
+    blocks: blocks,
+    racer: racer,
+    memory: memory,
+    clicker: clicker,
+    pong: pong,
+    breakout: breakout,
+    flappy: flappy,
+    tictactoe: tictactoe,
+    mines: mines,
+    math: math,
+    whack: whack,
+    typing: typing,
+    car: simCar,
+    flight: simFlight,
+    bus: bus,
+    truck: truck,
+    farm: farm,
+    parking: parking,
+    train: train,
+    fishing: fishing,
+    space: space,
+    superplumber: premiumGame,
+    kartrush: premiumGame,
+    citydriver: premiumGame,
+    spacebattle: premiumGame,
+    masterchef: premiumGame,
+    flightacademy: premiumGame,
+    speedrace: premiumGame
+  };
+
+  function fallbackArcade(g){
+    area.innerHTML =
+      '<div class="game-wrap">'+
+      '<div style="text-align:center;font-size:70px;margin-bottom:8px">'+g.icon+'</div>'+
+      '<h3 style="text-align:center">'+g.name+'</h3>'+
+      '<p id="fallbackInfo" class="score">Clique no alvo! 30 segundos.</p>'+
+      '<div id="fallbackBoard" style="position:relative;height:300px;max-width:760px;margin:15px auto;border:1px solid #26344d;border-radius:16px;background:#08101b;overflow:hidden"></div>'+
+      '</div>';
+    const board=document.querySelector('#fallbackBoard');
+    const info=document.querySelector('#fallbackInfo');
+    let score=0,time=30,active=true;
+    const target=document.createElement('button');
+    target.textContent=g.icon;
+    target.style.cssText='position:absolute;width:64px;height:64px;border-radius:50%;border:0;font-size:32px;cursor:pointer;background:#6d5dfc';
+    board.appendChild(target);
+    function move(){
+      target.style.left=Math.max(0,Math.random()*(board.clientWidth-64))+'px';
+      target.style.top=Math.max(0,Math.random()*(board.clientHeight-64))+'px';
+    }
+    target.onclick=()=>{if(!active)return;score+=10;info.textContent='Pontos: '+score+' • Tempo: '+time+'s';move()};
+    move();
+    const timer=setInterval(()=>{
+      if(!document.querySelector('#fallbackBoard')){clearInterval(timer);return}
+      time--;
+      info.textContent='Pontos: '+score+' • Tempo: '+time+'s';
+      if(time<=0){clearInterval(timer);active=false;info.textContent='🏆 Fim! Pontuação: '+score+' pontos';target.disabled=true}
+    },1000);
+  }
+
+  window.launch = function(id){
+    const g=games.find(x=>x.id===id)||games[0];
+    try{
+      addRecent(id);
+      document.querySelector('#gameCategory').textContent=g.cat.toUpperCase();
+      document.querySelector('#gameTitle').textContent=g.name;
+      modal.classList.remove('hidden');
+
+      const fn=REAL_GAME_MAP[id];
+      if(fn){
+        if(fn===premiumGame) fn(id);
+        else fn();
+      }else{
+        fallbackArcade(g);
+      }
+    }catch(err){
+      console.error('Games Online - erro ao iniciar '+id,err);
+      modal.classList.remove('hidden');
+      area.innerHTML='<div class="game-wrap" style="text-align:center;padding:40px"><div style="font-size:70px">'+g.icon+'</div><h3>Erro ao iniciar o jogo</h3><p>Recarregue a página e tente novamente.</p><button class="primary" onclick="location.reload()">RECARREGAR</button></div>';
+    }
+  };
+
+  document.querySelectorAll('[data-launch]').forEach(b=>{
+    b.onclick=(e)=>{e.preventDefault();e.stopPropagation();window.launch(b.dataset.launch)};
+  });
+})();
