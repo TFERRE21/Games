@@ -978,6 +978,84 @@ document.querySelectorAll('[data-launch]').forEach(b=>{
 
 
 
+
+
+/* ===== JOGOS ESPECIFICOS APRIMORADOS ===== */
+function gameShell(title,subtitle){
+ area.innerHTML='<div class="game-wrap"><div style="text-align:center"><div style="font-size:58px">'+title+'</div><p class="score">'+subtitle+'</p></div><div id="specificGame"></div></div>';
+ return document.querySelector('#specificGame');
+}
+function goalKeeper(){
+ const box=gameShell('🥅','Defenda o gol • use o mouse/toque');
+ box.innerHTML='<div style="position:relative;height:330px;border-radius:18px;overflow:hidden;background:linear-gradient(#73c8f5 0 58%,#4caf50 58%);border:2px solid #2c405d"><div style="position:absolute;left:0;right:0;bottom:0;height:42%;border-top:3px solid white"></div><div id="ball" style="position:absolute;font-size:46px;cursor:pointer">⚽</div><div id="goalInfo" class="score" style="position:absolute;top:12px;left:12px;background:#08101bcc;padding:8px 12px;border-radius:10px">Defesas: 0 • 10 chutes</div></div>';
+ const b=document.querySelector('#ball'),inf=document.querySelector('#goalInfo');let saves=0,shots=0,active=true;
+ function kick(){if(!active)return;shots++;const gx=20+Math.random()*80,gy=55+Math.random()*28;b.style.left=gx+'%';b.style.top=gy+'%';inf.textContent='Defesas: '+saves+' • Chutes: '+shots+'/10';if(shots>=10){active=false;inf.textContent='🏆 Fim! Defesas: '+saves}}
+ b.onclick=()=>{if(active){saves++;inf.textContent='🧤 DEFESA! '+saves+' • Chutes: '+shots+'/10';kick()}};kick();const t=setInterval(()=>{if(!active){clearInterval(t);return}kick()},1400);
+}
+function princessDress(){
+ const box=gameShell('👗','Vista a personagem e monte um look');
+ const parts=[['Cabelo','💇‍♀️',['👱‍♀️','👩‍🦰','🧑‍🎤']],['Roupa','👗',['👗','🥻','👚']],['Sapato','👠',['👠','👟','🥾']],['Acessório','💎',['👑','🎀','👜']]];
+ box.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px"><div style="background:#ffd9ed;border-radius:18px;display:flex;align-items:center;justify-content:center;min-height:300px"><div id="dressChar" style="font-size:105px">👱‍♀️<br>👗<br>👠</div></div><div id="dressOptions"></div></div><div id="dressScore" class="score">Escolha todos os itens</div>';
+ const opt=document.querySelector('#dressOptions'),char=document.querySelector('#dressChar'),score=document.querySelector('#dressScore'),sel=['👱‍♀️','👗','👠'];opt.innerHTML=parts.map((p,i)=>'<div style="margin:8px 0"><b>'+p[0]+'</b> '+p[2].map((v,j)=>'<button class="primary" data-d="'+i+'-'+j+'" style="margin:4px">'+v+'</button>').join('')+'</div>').join('');
+ opt.onclick=e=>{const b=e.target.closest('[data-d]');if(!b)return;const [i,j]=b.dataset.d.split('-').map(Number);sel[i]=parts[i][2][j];char.textContent=sel.join('\\n');score.textContent='✨ Look montado! '+sel.join(' ');};
+}
+function fashionStudio(){
+ const box=gameShell('💄','Estúdio de moda • combine cores e acessórios');
+ box.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px"><div id="model" style="min-height:300px;border-radius:18px;background:#f3e8ff;display:flex;align-items:center;justify-content:center;font-size:120px">💃</div><div><h3>Paleta</h3><button class="primary" data-c="#ff4d6d">🌸 Rosa</button><button class="primary" data-c="#6d5dfc">💜 Roxo</button><button class="primary" data-c="#18d6a0">💚 Verde</button><h3>Acessórios</h3><button class="primary" data-a="👑">👑</button><button class="primary" data-a="🕶️">🕶️</button><button class="primary" data-a="💎">💎</button><p id="fashionMsg" class="score">Crie seu visual.</p></div></div>';
+ let acc='';const m=document.querySelector('#model'),msg=document.querySelector('#fashionMsg');box.onclick=e=>{if(e.target.dataset.c){m.style.background=e.target.dataset.c;msg.textContent='🎨 Cor escolhida!'}if(e.target.dataset.a){acc=e.target.dataset.a;m.textContent='💃'+acc;msg.textContent='✨ Acessório '+acc+' aplicado!'}};
+}
+function petCare(){
+ const box=gameShell('🐶','Cuide do seu pet • mantenha os indicadores altos');
+ box.innerHTML='<div style="font-size:100px;text-align:center" id="pet">🐶</div><div id="petStats" class="score">❤️ 70 • 🍖 70 • 😊 70</div><div style="display:flex;gap:8px;justify-content:center"><button class="primary" id="feed">🍖 Alimentar</button><button class="primary" id="bath">🛁 Banho</button><button class="primary" id="play">🎾 Brincar</button></div>';
+ let hp=70,food=70,happy=70;const st=document.querySelector('#petStats'),pet=document.querySelector('#pet');
+ function draw(){hp=Math.max(0,Math.min(100,hp));food=Math.max(0,Math.min(100,food));happy=Math.max(0,Math.min(100,happy));st.textContent='❤️ '+hp+' • 🍖 '+food+' • 😊 '+happy;if(hp<30)pet.textContent='🥺';else if(happy>85)pet.textContent='🐕';else pet.textContent='🐶'}
+ feed.onclick=()=>{food+=18;hp+=5;draw()};bath.onclick=()=>{hp+=12;happy+=6;draw()};play.onclick=()=>{happy+=18;food-=7;draw()};setInterval(()=>{food-=2;happy-=1;if(food<25)hp-=2;draw()},1600);
+}
+function coloringGame(kind){
+ const box=gameShell(kind==='animals'?'🦄':kind==='cars'?'🏎️':'🎨','Pinte cada parte do desenho');
+ box.innerHTML='<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center"><button class="colorBtn" data-c="#ff4d6d">🔴</button><button class="colorBtn" data-c="#ffd43b">🟡</button><button class="colorBtn" data-c="#18d6a0">🟢</button><button class="colorBtn" data-c="#4dabf7">🔵</button><button class="colorBtn" data-c="#b36cff">🟣</button></div><div id="paint" style="margin:18px auto;max-width:680px;min-height:260px;background:#fff;border-radius:20px;padding:22px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px"></div><p id="paintInfo" class="score">Escolha uma cor e pinte as peças.</p>';
+ const paint=document.querySelector('#paint'),info=document.querySelector('#paintInfo');const icons=kind==='animals'?['🦄','🐱','🦋','🐶','🐼','🐰']:kind==='cars'?['🏎️','🚗','🚙','🚕','🛻','🏍️']:['🌈','⭐','🎈','🌸','🍭','🎮'];let color='#ff4d6d';
+ document.querySelectorAll('.colorBtn').forEach(b=>b.onclick=()=>color=b.dataset.c);
+ icons.forEach(v=>{const q=document.createElement('button');q.textContent=v;q.style.cssText='font-size:55px;min-height:90px;border:3px solid #ddd;border-radius:16px;background:#fff;cursor:pointer';q.onclick=()=>{q.style.background=color;q.style.borderColor=color;info.textContent='🎨 '+v+' pintado!'};paint.appendChild(q)});
+}
+function pizzaMaker(){
+ const box=gameShell('🍕','Pizza Maker • coloque os ingredientes pedidos');
+ const orders=[['🍅','🧀','🌶️'],['🍍','🧀','🥓'],['🍄','🧀','🫑']];let order=orders[Math.floor(Math.random()*orders.length)],picked=[];
+ box.innerHTML='<h3>Pedido: '+order.join(' ')+'</h3><div id="pizza" style="font-size:115px;text-align:center">🍕</div><div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap">'+['🍅','🧀','🌶️','🍍','🥓','🍄','🫑'].map(v=>'<button class="primary" data-ing="'+v+'">'+v+'</button>').join('')+'</div><p id="pizzaInfo" class="score">Ingredientes: 0/'+order.length+'</p>';
+ const info=document.querySelector('#pizzaInfo');box.onclick=e=>{const b=e.target.closest('[data-ing]');if(!b)return;const v=b.dataset.ing;if(order.includes(v)&&!picked.includes(v)){picked.push(v);info.textContent='Ingrediente certo! '+picked.length+'/'+order.length;if(picked.length===order.length)info.textContent='🏆 Pizza pronta! Pedido perfeito!'}else info.textContent='❌ Esse ingrediente não faz parte do pedido.'};
+}
+function bakery(){
+ const box=gameShell('🧁','Bakery Star • atenda os pedidos antes do tempo');
+ const orders=['🧁','🍰','🥐','🍩'];let done=0,time=30;
+ box.innerHTML='<div id="bakeryOrder" style="font-size:80px;text-align:center">🧁</div><div id="bakeryItems" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">'+orders.map(v=>'<button class="primary" data-b="'+v+'">'+v+'</button>').join('')+'</div><p id="bakeryInfo" class="score">Pedidos: 0 • Tempo: 30</p>';
+ const info=document.querySelector('#bakeryInfo'),ord=document.querySelector('#bakeryOrder');
+ const next=()=>ord.textContent=orders[Math.floor(Math.random()*orders.length)];
+ box.onclick=e=>{const b=e.target.closest('[data-b]');if(!b)return;if(b.dataset.b===ord.textContent){done++;next()}else done=Math.max(0,done-1);info.textContent='Pedidos: '+done+' • Tempo: '+time};next();
+ const t=setInterval(()=>{time--;info.textContent='Pedidos: '+done+' • Tempo: '+time;if(time<=0){clearInterval(t);info.textContent='🏆 Fim! Pedidos corretos: '+done}},1000);
+}
+function airport(){
+ const box=gameShell('🛫','Airport Manager • organize pousos e decolagens');
+ box.innerHTML='<div id="airportMap" style="position:relative;height:300px;border-radius:18px;background:#183a2b;overflow:hidden"><div style="position:absolute;left:10%;right:10%;top:45%;height:12px;background:#555"></div><div id="planes" style="position:absolute;inset:0"></div></div><p id="airportInfo" class="score">Pousos seguros: 0 • Aviões: 3</p>';
+ const map=document.querySelector('#planes'),info=document.querySelector('#airportInfo');let safe=0,planes=[];
+ for(let i=0;i<3;i++){const q=document.createElement('button');q.textContent='✈️';q.style.cssText='position:absolute;font-size:34px;background:none;border:0;cursor:pointer;left:'+(10+i*30)+'%;top:'+(10+i*18)+'%';map.appendChild(q);planes.push(q);q.onclick=()=>{safe++;q.remove();info.textContent='🛬 Pouso seguro: '+safe+' • Aviões restantes: '+document.querySelectorAll('#planes button').length;if(!document.querySelectorAll('#planes button').length)info.textContent='🏆 Aeroporto organizado!'}} 
+ planes.forEach((q,i)=>{let x=10+i*30,y=10+i*18;q.dataset.x=x;q.dataset.y=y;});const t=setInterval(()=>{planes.forEach(q=>{if(!q.isConnected)return;let x=(parseFloat(q.dataset.x)+.5)%90;q.dataset.x=x;q.style.left=x+'%'});},120);
+}
+function speedRace(){
+ const box=gameShell('🏎️','Speed Race • ultrapasse os adversários');
+ box.innerHTML='<div style="position:relative;height:320px;background:#222;border-radius:18px;overflow:hidden"><div id="raceCar" style="position:absolute;bottom:20px;left:45%;font-size:48px">🏎️</div><div id="rival" style="position:absolute;top:20px;left:20%;font-size:44px">🚗</div></div><p id="raceInfo" class="score">Distância: 0 m • Use ← →</p>';
+ let x=45,d=0,k={};const car=document.querySelector('#raceCar'),r=document.querySelector('#rival'),info=document.querySelector('#raceInfo');
+ const kd=e=>k[e.key]=1,ku=e=>k[e.key]=0;addEventListener('keydown',kd);addEventListener('keyup',ku);
+ function loop(){if(k.ArrowLeft)x-=1;if(k.ArrowRight)x+=1;x=Math.max(5,Math.min(85,x));d+=1.5;car.style.left=x+'%';r.style.left=(20+Math.sin(d/35)*30)+'%';info.textContent='Distância: '+Math.floor(d)+' m • '+(d>=1000?'🏆 CHEGADA!':'← → para dirigir');if(d<1000)requestAnimationFrame(loop)}loop();
+}
+function motorcycle(){
+ const box=gameShell('🏍️','Moto Rush • desvie do trânsito');
+ box.innerHTML='<div style="position:relative;height:330px;background:#20242b;border-radius:18px;overflow:hidden"><div id="moto" style="position:absolute;bottom:18px;left:45%;font-size:48px">🏍️</div><div id="traffic"></div></div><p id="motoInfo" class="score">Distância: 0 • Use ← →</p>';
+ const m=document.querySelector('#moto'),tr=document.querySelector('#traffic'),info=document.querySelector('#motoInfo');let x=45,d=0,k={},cars=[];
+ for(let i=0;i<5;i++){const q=document.createElement('div');q.textContent=['🚗','🚙','🚕'][i%3];q.style.cssText='position:absolute;font-size:40px;top:'+(i*70-100)+'px;left:'+(10+(i*17)%75)+'%';tr.appendChild(q);cars.push(q)}
+ addEventListener('keydown',e=>k[e.key]=1);addEventListener('keyup',e=>k[e.key]=0);
+ function loop(){if(k.ArrowLeft)x-=1.5;if(k.ArrowRight)x+=1.5;x=Math.max(4,Math.min(88,x));d+=1;cars.forEach((q,i)=>{let y=(parseFloat(q.dataset.y||(-80+i*70))+3)%400;q.dataset.y=y;q.style.top=y+'px';q.style.left=(10+((i*19+Math.floor(d/40))%75))+'%'});m.style.left=x+'%';info.textContent='Distância: '+Math.floor(d)+' m • '+(d>1200?'🏁 Chegada!':'← → para desviar');if(d<1200)requestAnimationFrame(loop)}loop();
+}
+
 /* ===== JOGOS REAIS: NAO USAR A TELA GENERICA DE CAMPANHA ===== */
 (function(){
   const REAL_GAME_MAP = {
